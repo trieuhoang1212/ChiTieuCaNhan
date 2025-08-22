@@ -69,7 +69,7 @@
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <div class="navbar-nav ms-auto py-0">
               <a href="index.html" class="nav-item nav-link">Chung</a>
-              <a href="KhoanChi.html" class="nav-item nav-link">Khoản Chi</a>
+              <a href="NapRut.html" class="nav-item nav-link">Nạp/Rút</a>
               <a href="ChiTieu.html" class="nav-item nav-link active"
                 >Chi Tiêu</a
               >
@@ -87,6 +87,7 @@
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
               </div>
+              <a href="ThongTin.html" class="nav-item nav-link">Thông Tin</a>
               <a href="Admin\template\index.html" class="nav-item nav-link"
                 >Admin</a
               >
@@ -204,96 +205,219 @@
             </div>
           </div>
         </div>
+
+        <div class="mt-5">
+          <h3>Thống kê khoản chi trong tháng</h3>
+          <p><b>Tổng chi tháng này:</b> <span id="totalExpense">0 VNĐ</span></p>
+          <p>
+            <b>Mục chi nhiều nhất:</b>
+            <span id="topCategory">Chưa có dữ liệu</span>
+          </p>
+          <div class="mt-5">
+            <h3 class="mb-3">Thống kê chi tiêu theo danh mục</h3>
+            <canvas id="categoryChart" width="250" height="250"></canvas>
+          </div>
+        </div>
         <!-- Back to Top -->
         <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
           ><i class="bi bi-arrow-up"></i
         ></a>
       </div>
-
-      <!-- JavaScript Libraries -->
-      <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-      <script src="lib/wow/wow.min.js"></script>
-      <script src="lib/easing/easing.min.js"></script>
-      <script src="lib/waypoints/waypoints.min.js"></script>
-      <script src="lib/owlcarousel/owl.carousel.min.js"></script>
-
-      <!-- Template Javascript -->
-      <script src="js/main.js"></script>
-
-      <script>
-        let expenses = [];
-
-        function renderTable() {
-          const tableBody = document.getElementById("expenseTableBody");
-          tableBody.innerHTML = "";
-
-          expenses.forEach((exp, index) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-      <td>${exp.date}</td>
-      <td>${exp.category}</td>
-      <td>${exp.description}</td>
-      <td>${parseInt(exp.amount).toLocaleString()} VNĐ</td>
-      <td>
-        <button class="btn btn-sm btn-warning" onclick="editExpense(${index})">Sửa</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteExpense(${index})">Xoá</button>
-      </td>
-    `;
-            tableBody.appendChild(row);
-          });
-
-          updateStats();
-        }
-
-        document
-          .getElementById("saveExpense")
-          .addEventListener("click", function () {
-            const form = document.getElementById("expenseForm");
-            const date = form.date.value;
-            const category = form.category.value;
-            const description = form.description.value;
-            const amount = form.amount.value;
-            const editIndex = form.editIndex.value;
-
-            if (date && category && description && amount) {
-              const expenseData = { date, category, description, amount };
-
-              if (editIndex) {
-                expenses[editIndex] = expenseData; // sửa
-              } else {
-                expenses.push(expenseData); // thêm mới
-              }
-
-              renderTable();
-
-              // Reset form + đóng modal
-              form.reset();
-              form.editIndex.value = "";
-              var modal = bootstrap.Modal.getInstance(
-                document.getElementById("addExpenseModal")
-              );
-              modal.hide();
-            }
-          });
-
-        function editExpense(index) {
-          const exp = expenses[index];
-          const form = document.getElementById("expenseForm");
-          form.date.value = exp.date;
-          form.category.value = exp.category;
-          form.description.value = exp.description;
-          form.amount.value = exp.amount;
-          form.editIndex.value = index;
-        }
-
-        function deleteExpense(index) {
-          if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
-            expenses.splice(index, 1);
-            renderTable();
-          }
-        }
-      </script>
+      <!-- Back to Top -->
+      <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
+        ><i class="bi bi-arrow-up"></i
+      ></a>
     </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="lib/wow/wow.min.js"></script>
+    <script src="lib/easing/easing.min.js"></script>
+    <script src="lib/waypoints/waypoints.min.js"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+
+    <!-- Template Javascript -->
+    <script src="js/main.js"></script>
+
+    <!-- Thêm thư viện Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+      let expenses = [];
+      let categoryChart = null;
+
+      // Khi load trang
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedExpenses = localStorage.getItem("expenses");
+        if (savedExpenses) {
+          expenses = JSON.parse(savedExpenses);
+        }
+        renderTable();
+      });
+
+      function renderTable() {
+        const tableBody = document.getElementById("expenseTableBody");
+        tableBody.innerHTML = "";
+
+        expenses.forEach((exp, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+        <td>${exp.date}</td>
+        <td>${exp.category}</td>
+        <td>${exp.description}</td>
+        <td>${parseInt(exp.amount).toLocaleString()} VNĐ</td>
+        <td>
+          <button class="btn btn-sm btn-warning" onclick="editExpense(${index})">Sửa</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteExpense(${index})">Xoá</button>
+        </td>
+      `;
+          tableBody.appendChild(row);
+        });
+
+        updateStats();
+        updateCategoryChart();
+        localStorage.setItem("expenses", JSON.stringify(expenses));
+      }
+
+      // Lưu khoản chi (thêm hoặc sửa)
+      document
+        .getElementById("saveExpense")
+        .addEventListener("click", function () {
+          const form = document.getElementById("expenseForm");
+          const date = form.date.value;
+          const category = form.category.value;
+          const description = form.description.value;
+          const amount = form.amount.value;
+          const editIndex = form.editIndex.value;
+
+          if (date && category && description && amount) {
+            const expenseData = { date, category, description, amount };
+
+            if (editIndex) {
+              expenses[editIndex] = expenseData; // sửa
+            } else {
+              expenses.push(expenseData); // thêm mới
+            }
+
+            renderTable();
+
+            // Reset form + đóng modal
+            form.reset();
+            form.editIndex.value = "";
+            var modal = bootstrap.Modal.getInstance(
+              document.getElementById("addExpenseModal")
+            );
+            modal.hide();
+          }
+        });
+
+      function editExpense(index) {
+        const exp = expenses[index];
+        const form = document.getElementById("expenseForm");
+        form.date.value = exp.date;
+        form.category.value = exp.category;
+        form.description.value = exp.description;
+        form.amount.value = exp.amount;
+        form.editIndex.value = index;
+      }
+
+      function deleteExpense(index) {
+        if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
+          expenses.splice(index, 1);
+          renderTable();
+        }
+      }
+
+      // Thống kê
+      function updateStats() {
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+        let total = 0;
+        let categoryTotals = {};
+
+        expenses
+          .filter((exp) => exp.date.slice(0, 7) === currentMonth)
+          .forEach((exp) => {
+            total += parseInt(exp.amount);
+            categoryTotals[exp.category] =
+              (categoryTotals[exp.category] || 0) + parseInt(exp.amount);
+          });
+
+        document.getElementById("totalExpense").textContent =
+          total.toLocaleString() + " VNĐ";
+
+        if (Object.keys(categoryTotals).length > 0) {
+          const topCategory = Object.entries(categoryTotals).sort(
+            (a, b) => b[1] - a[1]
+          )[0][0];
+          document.getElementById("topCategory").textContent = topCategory;
+        } else {
+          document.getElementById("topCategory").textContent =
+            "Chưa có dữ liệu";
+        }
+      }
+
+      // Biểu đồ theo danh mục
+      function updateCategoryChart() {
+        const stats = getCurrentMonthCategoryStats();
+        const labels = Object.keys(stats);
+        const data = Object.values(stats);
+
+        if (categoryChart) {
+          categoryChart.destroy(); // xoá chart cũ nếu có
+        }
+
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        categoryChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: data,
+                backgroundColor: [
+                  "#FF6384",
+                  "#36A2EB",
+                  "#FFCE56",
+                  "#4BC0C0",
+                  "#9966FF",
+                ],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return (
+                      context.label +
+                      ": " +
+                      context.raw.toLocaleString() +
+                      " VNĐ"
+                    );
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function getCurrentMonthCategoryStats() {
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+        let categoryTotals = {};
+        expenses
+          .filter((exp) => exp.date.slice(0, 7) === currentMonth)
+          .forEach((exp) => {
+            categoryTotals[exp.category] =
+              (categoryTotals[exp.category] || 0) + parseInt(exp.amount);
+          });
+        return categoryTotals;
+      }
+    </script>
   </body>
 </html>
