@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Quản lý chi tiêu</title>
+    <title>Chung - Quản lý chi tiêu</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="" name="keywords" />
     <meta content="" name="description" />
@@ -85,10 +85,32 @@
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
               </div>
-              <a href="ThongTin.html" class="nav-item nav-link">Thông Tin</a>
               <a href="Admin\template\index.html" class="nav-item nav-link"
                 >Admin</a
               >
+              <div class="nav-item dropdown" id="loginMenu">
+                <a href="DangNhap.html" class="nav-item nav-link" id="loginLink"
+                  >Đăng Nhập</a
+                >
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="loginLink"
+                  id="userDropdown">
+                  <li>
+                    <a class="dropdown-item" href="ThongTin.html"
+                      >👤 Thông tin</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="index.html"
+                      onclick="logout()"
+                      >🚪 Đăng xuất</a
+                    >
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </nav>
@@ -643,5 +665,8 @@
 
     <!-- Template Javascript -->
     <script src="js/main.js"></script>
+
+    <!-- Đăng nhập -->
+    <script src="js/navbar.js"></script>
   </body>
 </html>

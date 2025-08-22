@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Nạp/Rút - MoneyCare</title>
+    <title>Nạp/Rút - Quản lý chi tiêu</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="" name="keywords" />
     <meta content="" name="description" />
@@ -16,7 +16,6 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
       rel="stylesheet" />
-
     <!-- Icon Font Stylesheet -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
@@ -44,7 +43,7 @@
         class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
         <div
           class="spinner-border text-primary"
-          style="width: 3rem; height: 3rem"
+          style="width: 4rem; height: 4rem"
           role="status">
           <span class="sr-only">Loading...</span>
         </div>
@@ -71,6 +70,7 @@
               <a href="index.html" class="nav-item nav-link">Chung</a>
               <a href="NapRut.html" class="nav-item nav-link active">Nạp/Rút</a>
               <a href="ChiTieu.html" class="nav-item nav-link">Chi Tiêu</a>
+
               <div class="nav-item dropdown">
                 <a
                   href="#"
@@ -85,10 +85,32 @@
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
               </div>
-              <a href="ThongTin.html" class="nav-item nav-link">Thông Tin</a>
               <a href="Admin\template\index.html" class="nav-item nav-link"
                 >Admin</a
               >
+              <div class="nav-item dropdown" id="loginMenu">
+                <a href="DangNhap.html" class="nav-item nav-link" id="loginLink"
+                  >Đăng Nhập</a
+                >
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="loginLink"
+                  id="userDropdown">
+                  <li>
+                    <a class="dropdown-item" href="ThongTin.html"
+                      >👤 Thông tin</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="index.html"
+                      onclick="logout()"
+                      >🚪 Đăng xuất</a
+                    >
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </nav>
@@ -222,9 +244,16 @@
                 balance -= amount;
               }
 
-              // Tạo giao dịch
+              // Tạo giao dịch mới
               const transaction = { date, type, description, amount, balance };
-              transactions.push(transaction);
+
+              // 🔥 Thêm vào đầu danh sách để luôn giữ giao dịch mới nhất ở trên
+              transactions.unshift(transaction);
+
+              // 🔥 Giới hạn 10 giao dịch gần nhất
+              if (transactions.length > 10) {
+                transactions = transactions.slice(0, 10);
+              }
 
               // Lưu vào localStorage
               localStorage.setItem("balance", balance);
@@ -252,16 +281,18 @@
             transactions.forEach((t) => {
               const row = document.createElement("tr");
               row.innerHTML = `
-          <td>${t.date}</td>
-          <td>${t.type}</td>
-          <td>${t.description || ""}</td>
-          <td>${t.amount.toLocaleString()} VNĐ</td>
-          <td>${t.balance.toLocaleString()} VNĐ</td>
-        `;
+        <td>${t.date}</td>
+        <td>${t.type}</td>
+        <td>${t.description || ""}</td>
+        <td>${t.amount.toLocaleString()} VNĐ</td>
+        <td>${t.balance.toLocaleString()} VNĐ</td>
+      `;
               tbody.appendChild(row);
             });
           }
         </script>
+
+        <script src="js/navbar.js"></script>
       </body>
     </div>
   </body>

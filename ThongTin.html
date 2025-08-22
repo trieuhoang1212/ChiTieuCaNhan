@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>BizConsult - Consulting HTML Template</title>
+    <title>Thông Tin - MoneyCare</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="" name="keywords" />
     <meta content="" name="description" />
@@ -85,7 +85,9 @@
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
               </div>
-              <a href="ThongTin.html" class="nav-item nav-link active">Thông Tin</a>
+              <a href="ThongTin.html" class="nav-item nav-link active"
+                >Thông Tin</a
+              >
               <a href="Admin\template\index.html" class="nav-item nav-link"
                 >Admin</a
               >
@@ -115,16 +117,179 @@
         </div>
       </div>
 
-      <!-- JavaScript Libraries -->
-      <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-      <script src="lib/wow/wow.min.js"></script>
-      <script src="lib/easing/easing.min.js"></script>
-      <script src="lib/waypoints/waypoints.min.js"></script>
-      <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+      <body class="bg-light">
+        <div class="container py-5">
+          <h2 class="mb-4">Thông tin người dùng</h2>
 
-      <!-- Template Javascript -->
-      <script src="js/main.js"></script>
+          <!-- Thông tin hiển thị -->
+          <div class="card p-3 mb-4">
+            <h4>Thông tin hiện tại</h4>
+            <p><b>Họ tên:</b> <span id="displayName">Chưa có</span></p>
+            <p><b>Email:</b> <span id="displayEmail">Chưa có</span></p>
+            <p><b>Số điện thoại:</b> <span id="displayPhone">Chưa có</span></p>
+            <p><b>Ngày sinh:</b> <span id="displayDob">Chưa có</span></p>
+            <p><b>Địa chỉ:</b> <span id="displayAddress">Chưa có</span></p>
+            <p><b>Ngân hàng:</b> <span id="displayBank">Chưa có</span></p>
+            <p><b>Số tài khoản:</b> <span id="displayAccount">Chưa có</span></p>
+            <button
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#userModal">
+              Chỉnh sửa
+            </button>
+          </div>
+
+          <!-- Modal chỉnh sửa -->
+          <div class="modal fade" id="userModal" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <form id="userForm">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Cập nhật thông tin người dùng</h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label">Họ tên</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        name="name"
+                        required />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        name="email"
+                        required />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Số điện thoại</label>
+                      <input type="text" class="form-control" name="phone" />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Ngày sinh</label>
+                      <input type="date" class="form-control" name="dob" />
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Địa chỉ</label>
+                      <input type="text" class="form-control" name="address" />
+                    </div>
+
+                    <!-- Ngân hàng -->
+                    <div class="mb-3">
+                      <label class="form-label">Ngân hàng</label>
+                      <select class="form-select" name="bank">
+                        <option value="">-- Chọn ngân hàng --</option>
+                        <option>Vietcombank</option>
+                        <option>BIDV</option>
+                        <option>VietinBank</option>
+                        <option>Agribank</option>
+                        <option>Techcombank</option>
+                        <option>ACB</option>
+                        <option>MB Bank</option>
+                        <option>TPBank</option>
+                        <option>Sacombank</option>
+                        <option>VPBank</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Số tài khoản</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        name="accountNumber" />
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal">
+                      Đóng
+                    </button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- JavaScript Libraries -->
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="lib/wow/wow.min.js"></script>
+        <script src="lib/easing/easing.min.js"></script>
+        <script src="lib/waypoints/waypoints.min.js"></script>
+        <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+
+        <!-- Template Javascript -->
+        <script src="js/main.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+          let userInfo = {};
+
+          document.addEventListener("DOMContentLoaded", function () {
+            const savedUser = localStorage.getItem("userInfo");
+            if (savedUser) {
+              userInfo = JSON.parse(savedUser);
+            }
+            renderUserInfo();
+          });
+
+          document
+            .getElementById("userForm")
+            .addEventListener("submit", function (e) {
+              e.preventDefault();
+              const form = e.target;
+              userInfo = {
+                name: form.name.value,
+                email: form.email.value,
+                phone: form.phone.value,
+                dob: form.dob.value,
+                address: form.address.value,
+                bank: form.bank.value,
+                accountNumber: form.accountNumber.value,
+              };
+              localStorage.setItem("userInfo", JSON.stringify(userInfo));
+              renderUserInfo();
+            });
+
+          function renderUserInfo() {
+            document.getElementById("displayName").textContent =
+              userInfo.name || "Chưa có";
+            document.getElementById("displayEmail").textContent =
+              userInfo.email || "Chưa có";
+            document.getElementById("displayPhone").textContent =
+              userInfo.phone || "Chưa có";
+            document.getElementById("displayDob").textContent =
+              userInfo.dob || "Chưa có";
+            document.getElementById("displayAddress").textContent =
+              userInfo.address || "Chưa có";
+            document.getElementById("displayBank").textContent =
+              userInfo.bank || "Chưa có";
+            document.getElementById("displayAccount").textContent =
+              userInfo.accountNumber || "Chưa có";
+
+            // điền sẵn dữ liệu vào form
+            const form = document.getElementById("userForm");
+            form.name.value = userInfo.name || "";
+            form.email.value = userInfo.email || "";
+            form.phone.value = userInfo.phone || "";
+            form.dob.value = userInfo.dob || "";
+            form.address.value = userInfo.address || "";
+            form.bank.value = userInfo.bank || "";
+            form.accountNumber.value = userInfo.accountNumber || "";
+          }
+        </script>
+      </body>
     </div>
   </body>
 </html>

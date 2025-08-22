@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>BizConsult - Consulting HTML Template</title>
+    <title>Chi Tiêu - Quản lý chi tiêu</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <meta content="" name="keywords" />
     <meta content="" name="description" />
@@ -16,7 +16,6 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
       rel="stylesheet" />
-
     <!-- Icon Font Stylesheet -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
@@ -44,7 +43,7 @@
         class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
         <div
           class="spinner-border text-primary"
-          style="width: 3rem; height: 3rem"
+          style="width: 4rem; height: 4rem"
           role="status">
           <span class="sr-only">Loading...</span>
         </div>
@@ -70,9 +69,8 @@
             <div class="navbar-nav ms-auto py-0">
               <a href="index.html" class="nav-item nav-link">Chung</a>
               <a href="NapRut.html" class="nav-item nav-link">Nạp/Rút</a>
-              <a href="ChiTieu.html" class="nav-item nav-link active"
-                >Chi Tiêu</a
-              >
+              <a href="ChiTieu.html" class="nav-item nav-link active">Chi Tiêu</a>
+
               <div class="nav-item dropdown">
                 <a
                   href="#"
@@ -87,10 +85,32 @@
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
               </div>
-              <a href="ThongTin.html" class="nav-item nav-link">Thông Tin</a>
               <a href="Admin\template\index.html" class="nav-item nav-link"
                 >Admin</a
               >
+              <div class="nav-item dropdown" id="loginMenu">
+                <a href="DangNhap.html" class="nav-item nav-link" id="loginLink"
+                  >Đăng Nhập</a
+                >
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="loginLink"
+                  id="userDropdown">
+                  <li>
+                    <a class="dropdown-item" href="ThongTin.html"
+                      >👤 Thông tin</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="index.html"
+                      onclick="logout()"
+                      >🚪 Đăng xuất</a
+                    >
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </nav>
@@ -117,307 +137,229 @@
         </div>
       </div>
 
-      <!-- Navbar & Hero End -->
+      <body>
+        <div class="container mt-4">
+          <h3>Số dư hiện có: <span id="currentBalance">0 VNĐ</span></h3>
 
-      <div class="container py-5">
-        <h2 class="mb-4">Khoản Chi</h2>
-        <button
-          class="btn btn-primary mb-3"
-          data-bs-toggle="modal"
-          data-bs-target="#addExpenseModal">
-          + Thêm khoản chi
-        </button>
+          <!-- Form đặt giới hạn -->
+          <form id="limitForm" class="mb-3">
+            <input
+              type="number"
+              id="limitAmount"
+              class="form-control mb-2"
+              placeholder="Nhập số tiền giới hạn tháng"
+              required />
+            <button type="submit" class="btn btn-primary">Đặt giới hạn</button>
+            <button
+              type="button"
+              class="btn btn-warning"
+              onclick="removeLimit()">
+              Bỏ giới hạn
+            </button>
+          </form>
 
-        <!-- Bảng Khoản Chi -->
-        <div class="table-responsive">
-          <table class="table table-bordered table-striped">
-            <thead class="table-primary">
+          <p>Giới hạn còn lại: <span id="monthlyLimit">0 VNĐ</span></p>
+
+          <!-- Thêm khoản chi -->
+          <form id="expenseForm" class="mb-4">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <select id="category" class="form-select" required>
+                  <option value="">-- Chọn danh mục --</option>
+                  <option value="Ăn uống">Ăn uống</option>
+                  <option value="Đi lại">Đi lại</option>
+                  <option value="Hóa đơn điện nước">Hóa đơn điện nước</option>
+                  <option value="Mua sắm">Mua sắm</option>
+                  <option value="Giải trí">Giải trí</option>
+                  <option value="Sức khỏe">Sức khỏe</option>
+                  <option value="Giáo dục">Giáo dục</option>
+                  <option value="Du lịch">Du lịch</option>
+                  <option value="Gia đình">Gia đình</option>
+                  <option value="Khác">Khác</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <input
+                  type="number"
+                  id="amount"
+                  class="form-control"
+                  placeholder="Số tiền chi (VNĐ)"
+                  required
+                  min="1" />
+              </div>
+              <div class="col-md-4">
+                <button class="btn btn-primary w-100">Thêm khoản chi</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Bảng khoản chi -->
+          <table class="table table-bordered">
+            <thead>
               <tr>
+                <th>ID</th>
                 <th>Ngày</th>
                 <th>Danh mục</th>
-                <th>Mô tả</th>
-                <th>Số tiền (VNĐ)</th>
+                <th>Số tiền</th>
                 <th>Hành động</th>
               </tr>
             </thead>
-            <tbody id="expenseTableBody">
-              <!-- Dữ liệu sẽ thêm ở đây -->
-            </tbody>
+            <tbody id="expenseTableBody"></tbody>
           </table>
         </div>
 
-        <!-- Modal Thêm / Sửa khoản chi -->
-        <div class="modal fade" id="addExpenseModal" tabindex="-1">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Thêm khoản chi</h5>
-                <button
-                  type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                <form id="expenseForm">
-                  <input type="hidden" name="editIndex" />
-                  <!-- dùng khi sửa -->
-                  <div class="mb-3">
-                    <label class="form-label">Ngày</label>
-                    <input
-                      type="date"
-                      class="form-control"
-                      name="date"
-                      required />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label">Danh mục</label>
-                    <select class="form-select" name="category" required>
-                      <option>Ăn uống</option>
-                      <option>Đi lại</option>
-                      <option>Giải trí</option>
-                      <option>Khác</option>
-                    </select>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label">Mô tả</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="description"
-                      required />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label">Số tiền</label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      name="amount"
-                      required />
-                  </div>
-                </form>
-              </div>
-              <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
-                  Đóng
-                </button>
-                <button class="btn btn-primary" id="saveExpense">Lưu</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Biểu đồ -->
+        <canvas id="expenseChart" height="100"></canvas>
 
-        <div class="mt-5">
-          <h3>Thống kê khoản chi trong tháng</h3>
-          <p><b>Tổng chi tháng này:</b> <span id="totalExpense">0 VNĐ</span></p>
-          <p>
-            <b>Mục chi nhiều nhất:</b>
-            <span id="topCategory">Chưa có dữ liệu</span>
-          </p>
-          <div class="mt-5">
-            <h3 class="mb-3">Thống kê chi tiêu theo danh mục</h3>
-            <canvas id="categoryChart" width="250" height="250"></canvas>
-          </div>
-        </div>
-        <!-- Back to Top -->
-        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
-          ><i class="bi bi-arrow-up"></i
-        ></a>
-      </div>
-      <!-- Back to Top -->
-      <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
-        ><i class="bi bi-arrow-up"></i
-      ></a>
-    </div>
+        <!-- JavaScript Libraries -->
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="lib/wow/wow.min.js"></script>
+        <script src="lib/easing/easing.min.js"></script>
+        <script src="lib/waypoints/waypoints.min.js"></script>
+        <script src="lib/owlcarousel/owl.carousel.min.js"></script>
 
-    <!-- JavaScript Libraries -->
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/wow/wow.min.js"></script>
-    <script src="lib/easing/easing.min.js"></script>
-    <script src="lib/waypoints/waypoints.min.js"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+        <!-- Template Javascript -->
+        <script src="js/main.js"></script>
 
-    <!-- Template Javascript -->
-    <script src="js/main.js"></script>
+        <!-- Thêm thư viện Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Thêm thư viện Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Script -->
+        <script>
+          let balance = 0;
+          let monthlyLimit = 0;
+          let expenses = [];
 
-    <script>
-      let expenses = [];
-      let categoryChart = null;
+          document.addEventListener("DOMContentLoaded", () => {
+            balance = parseInt(localStorage.getItem("balance")) || 0;
+            monthlyLimit = parseInt(localStorage.getItem("monthlyLimit")) || 0;
 
-      // Khi load trang
-      document.addEventListener("DOMContentLoaded", function () {
-        const savedExpenses = localStorage.getItem("expenses");
-        if (savedExpenses) {
-          expenses = JSON.parse(savedExpenses);
-        }
-        renderTable();
-      });
+            const savedExpenses = localStorage.getItem("expenses");
+            if (savedExpenses) expenses = JSON.parse(savedExpenses);
 
-      function renderTable() {
-        const tableBody = document.getElementById("expenseTableBody");
-        tableBody.innerHTML = "";
+            updateUI();
+            renderExpenses();
+          });
 
-        expenses.forEach((exp, index) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-        <td>${exp.date}</td>
-        <td>${exp.category}</td>
-        <td>${exp.description}</td>
-        <td>${parseInt(exp.amount).toLocaleString()} VNĐ</td>
-        <td>
-          <button class="btn btn-sm btn-warning" onclick="editExpense(${index})">Sửa</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteExpense(${index})">Xoá</button>
-        </td>
-      `;
-          tableBody.appendChild(row);
-        });
+          // Đặt giới hạn
+          document
+            .getElementById("limitForm")
+            .addEventListener("submit", (e) => {
+              e.preventDefault();
+              const limit = parseInt(
+                document.getElementById("limitAmount").value
+              );
 
-        updateStats();
-        updateCategoryChart();
-        localStorage.setItem("expenses", JSON.stringify(expenses));
-      }
+              if (limit > balance) {
+                alert("❌ Số dư không đủ để đặt giới hạn này!");
+                return;
+              }
 
-      // Lưu khoản chi (thêm hoặc sửa)
-      document
-        .getElementById("saveExpense")
-        .addEventListener("click", function () {
-          const form = document.getElementById("expenseForm");
-          const date = form.date.value;
-          const category = form.category.value;
-          const description = form.description.value;
-          const amount = form.amount.value;
-          const editIndex = form.editIndex.value;
+              balance -= limit;
+              monthlyLimit = limit;
 
-          if (date && category && description && amount) {
-            const expenseData = { date, category, description, amount };
+              saveData();
+              updateUI();
+              e.target.reset();
+            });
 
-            if (editIndex) {
-              expenses[editIndex] = expenseData; // sửa
-            } else {
-              expenses.push(expenseData); // thêm mới
+          // Thêm khoản chi
+          document
+            .getElementById("expenseForm")
+            .addEventListener("submit", (e) => {
+              e.preventDefault();
+              const category = document.getElementById("category").value;
+              const amount = parseInt(document.getElementById("amount").value);
+
+              if (amount > monthlyLimit) {
+                alert("❌ Số tiền trong giới hạn không đủ!");
+                return;
+              }
+
+              const expense = {
+                id: Date.now(),
+                category,
+                amount,
+                date: new Date().toLocaleDateString("vi-VN"),
+              };
+
+              expenses.push(expense);
+              monthlyLimit -= amount;
+
+              saveData();
+              renderExpenses();
+              updateUI();
+              e.target.reset();
+            });
+
+          // Xoá khoản chi
+          function deleteExpense(id) {
+            id = Number(id);
+            const expense = expenses.find((e) => e.id === id);
+            if (!expense) return;
+
+            if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
+              monthlyLimit += expense.amount;
+              expenses = expenses.filter((e) => e.id !== id);
+
+              saveData();
+              renderExpenses();
+              updateUI();
             }
-
-            renderTable();
-
-            // Reset form + đóng modal
-            form.reset();
-            form.editIndex.value = "";
-            var modal = bootstrap.Modal.getInstance(
-              document.getElementById("addExpenseModal")
-            );
-            modal.hide();
           }
-        });
 
-      function editExpense(index) {
-        const exp = expenses[index];
-        const form = document.getElementById("expenseForm");
-        form.date.value = exp.date;
-        form.category.value = exp.category;
-        form.description.value = exp.description;
-        form.amount.value = exp.amount;
-        form.editIndex.value = index;
-      }
+          // Bỏ giới hạn
+          function removeLimit() {
+            if (monthlyLimit > 0) {
+              balance += monthlyLimit;
+              monthlyLimit = 0;
 
-      function deleteExpense(index) {
-        if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
-          expenses.splice(index, 1);
-          renderTable();
-        }
-      }
+              saveData();
+              updateUI();
+            }
+          }
 
-      // Thống kê
-      function updateStats() {
-        const today = new Date();
-        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
-        let total = 0;
-        let categoryTotals = {};
+          // Render bảng chi tiêu
+          function renderExpenses() {
+            const tbody = document.getElementById("expenseTableBody");
+            tbody.innerHTML = "";
 
-        expenses
-          .filter((exp) => exp.date.slice(0, 7) === currentMonth)
-          .forEach((exp) => {
-            total += parseInt(exp.amount);
-            categoryTotals[exp.category] =
-              (categoryTotals[exp.category] || 0) + parseInt(exp.amount);
-          });
+            expenses.forEach((ex) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+            <td>${ex.id}</td>
+            <td>${ex.date}</td>
+            <td>${ex.category}</td>
+            <td>${ex.amount.toLocaleString()} VNĐ</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteExpense(${
+                ex.id
+              })">Xoá</button>
+            </td>
+          `;
+              tbody.appendChild(row);
+            });
+          }
 
-        document.getElementById("totalExpense").textContent =
-          total.toLocaleString() + " VNĐ";
+          // Cập nhật số dư và giới hạn
+          function updateUI() {
+            document.getElementById("currentBalance").textContent =
+              balance.toLocaleString() + " VNĐ";
+            document.getElementById("monthlyLimit").textContent =
+              monthlyLimit.toLocaleString() + " VNĐ";
+          }
 
-        if (Object.keys(categoryTotals).length > 0) {
-          const topCategory = Object.entries(categoryTotals).sort(
-            (a, b) => b[1] - a[1]
-          )[0][0];
-          document.getElementById("topCategory").textContent = topCategory;
-        } else {
-          document.getElementById("topCategory").textContent =
-            "Chưa có dữ liệu";
-        }
-      }
+          // Lưu dữ liệu
+          function saveData() {
+            localStorage.setItem("balance", balance);
+            localStorage.setItem("monthlyLimit", monthlyLimit);
+            localStorage.setItem("expenses", JSON.stringify(expenses));
+          }
+        </script>
 
-      // Biểu đồ theo danh mục
-      function updateCategoryChart() {
-        const stats = getCurrentMonthCategoryStats();
-        const labels = Object.keys(stats);
-        const data = Object.values(stats);
-
-        if (categoryChart) {
-          categoryChart.destroy(); // xoá chart cũ nếu có
-        }
-
-        const ctx = document.getElementById("categoryChart").getContext("2d");
-        categoryChart = new Chart(ctx, {
-          type: "doughnut",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                data: data,
-                backgroundColor: [
-                  "#FF6384",
-                  "#36A2EB",
-                  "#FFCE56",
-                  "#4BC0C0",
-                  "#9966FF",
-                ],
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              tooltip: {
-                callbacks: {
-                  label: function (context) {
-                    return (
-                      context.label +
-                      ": " +
-                      context.raw.toLocaleString() +
-                      " VNĐ"
-                    );
-                  },
-                },
-              },
-            },
-          },
-        });
-      }
-
-      function getCurrentMonthCategoryStats() {
-        const today = new Date();
-        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
-        let categoryTotals = {};
-        expenses
-          .filter((exp) => exp.date.slice(0, 7) === currentMonth)
-          .forEach((exp) => {
-            categoryTotals[exp.category] =
-              (categoryTotals[exp.category] || 0) + parseInt(exp.amount);
-          });
-        return categoryTotals;
-      }
-    </script>
+        <script src="js/navbar.js"></script>
+      </body>
+    </div>
   </body>
 </html>
