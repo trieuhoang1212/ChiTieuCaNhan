@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BizConsult - Consulting HTML Template</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="" name="keywords" />
+    <meta content="" name="description" />
+
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon" />
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
+      rel="stylesheet" />
+
+    <!-- Icon Font Stylesheet -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
+      rel="stylesheet" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css"
+      rel="stylesheet" />
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/animate/animate.min.css" rel="stylesheet" />
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet" />
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Template Stylesheet -->
+    <link href="css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div class="container-xxl bg-white p-0">
+      <!-- Spinner Start -->
+      <div
+        id="spinner"
+        class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div
+          class="spinner-border text-primary"
+          style="width: 3rem; height: 3rem"
+          role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+      <!-- Spinner End -->
+
+      <!-- Navbar & Hero Start -->
+      <div class="container-xxl position-relative p-0">
+        <nav
+          class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
+          <a href="index.html" class="navbar-brand p-0">
+            <h1 class="m-0">MoneyCare</h1>
+            <!-- <img src="img/logo.png" alt="Logo"> -->
+          </a>
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarCollapse">
+            <span class="fa fa-bars"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <div class="navbar-nav ms-auto py-0">
+              <a href="index.html" class="nav-item nav-link">Chung</a>
+              <a href="KhoanChi.html" class="nav-item nav-link">Khoản Chi</a>
+              <a href="ChiTieu.html" class="nav-item nav-link active"
+                >Chi Tiêu</a
+              >
+              <div class="nav-item dropdown">
+                <a
+                  href="#"
+                  class="nav-link dropdown-toggle"
+                  data-bs-toggle="dropdown"
+                  >Mục</a
+                >
+                <div class="dropdown-menu m-0">
+                  <a href="TichLuy.html" class="dropdown-item">Tích Luỹ</a>
+                  <a href="ThuChi.html" class="dropdown-item">Giao Dịch</a>
+                  <a href="VayNo.html" class="dropdown-item">Vay Nợ</a>
+                  <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
+                </div>
+              </div>
+              <a href="Admin\template\index.html" class="nav-item nav-link"
+                >Admin</a
+              >
+            </div>
+          </div>
+        </nav>
+
+        <div class="container-xxl bg-primary page-header">
+          <div class="container text-center">
+            <h1 class="text-white animated zoomIn mb-3">Chi Tiêu</h1>
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb justify-content-center">
+                <li class="breadcrumb-item">
+                  <a class="text-white" href="#">Chung</a>
+                </li>
+                <li class="breadcrumb-item">
+                  <a class="text-white" href="#">Trang</a>
+                </li>
+                <li
+                  class="breadcrumb-item text-white active"
+                  aria-current="page">
+                  Chi Tiêu
+                </li>
+              </ol>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navbar & Hero End -->
+
+      <div class="container py-5">
+        <h2 class="mb-4">Khoản Chi</h2>
+        <button
+          class="btn btn-primary mb-3"
+          data-bs-toggle="modal"
+          data-bs-target="#addExpenseModal">
+          + Thêm khoản chi
+        </button>
+
+        <!-- Bảng Khoản Chi -->
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped">
+            <thead class="table-primary">
+              <tr>
+                <th>Ngày</th>
+                <th>Danh mục</th>
+                <th>Mô tả</th>
+                <th>Số tiền (VNĐ)</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTableBody">
+              <!-- Dữ liệu sẽ thêm ở đây -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Modal Thêm / Sửa khoản chi -->
+        <div class="modal fade" id="addExpenseModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Thêm khoản chi</h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <form id="expenseForm">
+                  <input type="hidden" name="editIndex" />
+                  <!-- dùng khi sửa -->
+                  <div class="mb-3">
+                    <label class="form-label">Ngày</label>
+                    <input
+                      type="date"
+                      class="form-control"
+                      name="date"
+                      required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Danh mục</label>
+                    <select class="form-select" name="category" required>
+                      <option>Ăn uống</option>
+                      <option>Đi lại</option>
+                      <option>Giải trí</option>
+                      <option>Khác</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Mô tả</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="description"
+                      required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Số tiền</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      name="amount"
+                      required />
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                  Đóng
+                </button>
+                <button class="btn btn-primary" id="saveExpense">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Back to Top -->
+        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
+          ><i class="bi bi-arrow-up"></i
+        ></a>
+      </div>
+
+      <!-- JavaScript Libraries -->
+      <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+      <script src="lib/wow/wow.min.js"></script>
+      <script src="lib/easing/easing.min.js"></script>
+      <script src="lib/waypoints/waypoints.min.js"></script>
+      <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+
+      <!-- Template Javascript -->
+      <script src="js/main.js"></script>
+
+      <script>
+        let expenses = [];
+
+        function renderTable() {
+          const tableBody = document.getElementById("expenseTableBody");
+          tableBody.innerHTML = "";
+
+          expenses.forEach((exp, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+      <td>${exp.date}</td>
+      <td>${exp.category}</td>
+      <td>${exp.description}</td>
+      <td>${parseInt(exp.amount).toLocaleString()} VNĐ</td>
+      <td>
+        <button class="btn btn-sm btn-warning" onclick="editExpense(${index})">Sửa</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteExpense(${index})">Xoá</button>
+      </td>
+    `;
+            tableBody.appendChild(row);
+          });
+
+          updateStats();
+        }
+
+        document
+          .getElementById("saveExpense")
+          .addEventListener("click", function () {
+            const form = document.getElementById("expenseForm");
+            const date = form.date.value;
+            const category = form.category.value;
+            const description = form.description.value;
+            const amount = form.amount.value;
+            const editIndex = form.editIndex.value;
+
+            if (date && category && description && amount) {
+              const expenseData = { date, category, description, amount };
+
+              if (editIndex) {
+                expenses[editIndex] = expenseData; // sửa
+              } else {
+                expenses.push(expenseData); // thêm mới
+              }
+
+              renderTable();
+
+              // Reset form + đóng modal
+              form.reset();
+              form.editIndex.value = "";
+              var modal = bootstrap.Modal.getInstance(
+                document.getElementById("addExpenseModal")
+              );
+              modal.hide();
+            }
+          });
+
+        function editExpense(index) {
+          const exp = expenses[index];
+          const form = document.getElementById("expenseForm");
+          form.date.value = exp.date;
+          form.category.value = exp.category;
+          form.description.value = exp.description;
+          form.amount.value = exp.amount;
+          form.editIndex.value = index;
+        }
+
+        function deleteExpense(index) {
+          if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
+            expenses.splice(index, 1);
+            renderTable();
+          }
+        }
+      </script>
+    </div>
+  </body>
+</html>

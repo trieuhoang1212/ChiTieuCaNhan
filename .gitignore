@@ -1,0 +1,20 @@
+# Add any directories, files, or patterns you don't want to be tracked by version control
+node_modules/
+package-lock.json
+.DS_Store
+.vscode
+
+partials/
+
+pages/
+
+img/
+
+bootstrap/
+
+lib/
+
+Admin/template/assets/fonts
+Admin/template/assets/images
+Admin/template/assets/vendors
+
