@@ -69,7 +69,9 @@
             <div class="navbar-nav ms-auto py-0">
               <a href="index.html" class="nav-item nav-link">Chung</a>
               <a href="NapRut.html" class="nav-item nav-link">Nạp/Rút</a>
-              <a href="ChiTieu.html" class="nav-item nav-link active">Chi Tiêu</a>
+              <a href="ChiTieu.html" class="nav-item nav-link active"
+                >Chi Tiêu</a
+              >
 
               <div class="nav-item dropdown">
                 <a
@@ -232,14 +234,117 @@
           let expenses = [];
 
           document.addEventListener("DOMContentLoaded", () => {
-            balance = parseInt(localStorage.getItem("balance")) || 0;
-            monthlyLimit = parseInt(localStorage.getItem("monthlyLimit")) || 0;
+            const currentBalanceElement =
+              document.getElementById("currentBalance");
 
-            const savedExpenses = localStorage.getItem("expenses");
-            if (savedExpenses) expenses = JSON.parse(savedExpenses);
+            // Hàm lấy số dư từ API `naprut.php`
+            async function fetchBalance() {
+              try {
+                const response = await fetch("PHP/naprut.php", {
+                  method: "GET",
+                });
+                const data = await response.json();
 
-            updateUI();
-            renderExpenses();
+                if (data.success) {
+                  // Cập nhật số dư hiện tại
+                  balance = data.transactions[0]?.so_du_sau || 0;
+                  currentBalanceElement.textContent =
+                    balance.toLocaleString() + " VNĐ";
+                } else {
+                  alert("Không thể tải số dư từ NapRut.");
+                }
+              } catch (error) {
+                console.error("Lỗi khi gọi API NapRut:", error);
+                alert("Đã xảy ra lỗi khi tải số dư.");
+              }
+            }
+
+            // Gọi API để lấy số dư khi tải trang
+            fetchBalance();
+          });
+
+          document.addEventListener("DOMContentLoaded", () => {
+            const expenseTableBody =
+              document.getElementById("expenseTableBody");
+            const expenseForm = document.getElementById("expenseForm");
+            const currentBalanceElement =
+              document.getElementById("currentBalance");
+
+            // Hàm lấy danh sách chi tiêu từ API
+            async function fetchExpenses() {
+              try {
+                const response = await fetch("PHP/chitieu.php");
+                const data = await response.json();
+
+                if (data.success) {
+                  renderExpenses(data.expenses);
+                } else {
+                  alert("Không thể tải dữ liệu chi tiêu.");
+                }
+              } catch (error) {
+                console.error("Lỗi khi gọi API:", error);
+              }
+            }
+
+            // Hàm hiển thị danh sách chi tiêu
+            function renderExpenses(expenses) {
+              expenseTableBody.innerHTML = "";
+              expenses.forEach((expense) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+        <td>${expense.id}</td>
+        <td>${expense.ngay}</td>
+        <td>${expense.danh_muc}</td>
+        <td>${expense.so_tien.toLocaleString()} VNĐ</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteExpense(${
+            expense.id
+          })">Xoá</button>
+        </td>
+      `;
+                expenseTableBody.appendChild(row);
+              });
+            }
+
+            // Hàm thêm khoản chi tiêu
+            expenseForm.addEventListener("submit", async (e) => {
+              e.preventDefault();
+              const category = document.getElementById("category").value;
+              const amount = parseInt(document.getElementById("amount").value);
+
+              if (amount <= 0) {
+                alert("❌ Số tiền phải lớn hơn 0!");
+                return;
+              }
+
+              console.log("Dữ liệu gửi đi:", {
+                danh_muc: category,
+                so_tien: amount,
+              });
+
+              try {
+                const response = await fetch("PHP/chitieu.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ danh_muc: category, so_tien: amount }),
+                });
+                const result = await response.json();
+
+                console.log("Kết quả từ API:", result);
+
+                if (result.success) {
+                  alert("Thêm khoản chi thành công!");
+                  fetchExpenses(); // Cập nhật danh sách chi tiêu
+                } else {
+                  alert(result.message || "Lỗi khi thêm khoản chi.");
+                }
+              } catch (error) {
+                console.error("Lỗi khi gọi API:", error);
+              }
+            });
+
+            // Gọi API khi tải trang
+            fetchExpenses();
           });
 
           // Đặt giới hạn
@@ -250,6 +355,11 @@
               const limit = parseInt(
                 document.getElementById("limitAmount").value
               );
+
+              if (isNaN(balance) || balance <= 0) {
+                alert("❌ Số dư hiện tại không hợp lệ. Vui lòng thử lại!");
+                return;
+              }
 
               if (limit > balance) {
                 alert("❌ Số dư không đủ để đặt giới hạn này!");

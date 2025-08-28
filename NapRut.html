@@ -206,90 +206,86 @@
         <script src="js/main.js"></script>
 
         <script>
-          let balance = 0;
-          let transactions = [];
-
           document.addEventListener("DOMContentLoaded", function () {
-            // Lấy dữ liệu từ localStorage
-            const savedBalance = localStorage.getItem("balance");
-            const savedTransactions = localStorage.getItem("transactions");
+            const transactionTableBody = document.getElementById(
+              "transactionTableBody"
+            );
+            const balanceElement = document.getElementById("balance");
+            const transactionForm = document.getElementById("transactionForm");
 
-            if (savedBalance) balance = parseInt(savedBalance);
-            if (savedTransactions) transactions = JSON.parse(savedTransactions);
+            // Hàm lấy dữ liệu từ API
+            async function fetchTransactions() {
+              try {
+                const response = await fetch("PHP/naprut.php", {
+                  method: "GET",
+                });
+                const data = await response.json();
 
-            updateBalance();
-            renderTransactions();
+                if (data.success) {
+                  // Hiển thị số dư hiện tại
+                  balanceElement.textContent =
+                    data.transactions[0]?.so_du_sau.toLocaleString() || "0";
+
+                  // Hiển thị danh sách giao dịch (tối đa 5 giao dịch)
+                  transactionTableBody.innerHTML = "";
+                  const transactionsToShow = data.transactions.slice(0, 5); // Lấy 5 giao dịch mới nhất
+                  transactionsToShow.forEach((transaction) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+              <td>${transaction.ngay}</td>
+              <td>${transaction.loai}</td>
+              <td>${transaction.mo_ta || ""}</td>
+              <td>${transaction.so_tien.toLocaleString()} VNĐ</td>
+              <td>${transaction.so_du_sau.toLocaleString()} VNĐ</td>
+            `;
+                    transactionTableBody.appendChild(row);
+                  });
+                } else {
+                  alert("Không thể tải dữ liệu giao dịch.");
+                }
+              } catch (error) {
+                console.error("Lỗi khi gọi API:", error);
+                alert("Đã xảy ra lỗi khi tải dữ liệu.");
+              }
+            }
+
+            // Hàm gửi dữ liệu nạp/rút
+            async function submitTransaction(event) {
+              event.preventDefault();
+
+              const formData = new FormData(transactionForm);
+              const data = {
+                loai: formData.get("type"),
+                so_tien: parseInt(formData.get("amount"), 10),
+                mo_ta: formData.get("description"),
+              };
+
+              try {
+                const response = await fetch("PHP/naprut.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(data),
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                  alert(result.message || "Giao dịch thành công!");
+                  fetchTransactions(); // Cập nhật lại danh sách giao dịch
+                } else {
+                  alert(result.message || "Giao dịch thất bại!");
+                }
+              } catch (error) {
+                console.error("Lỗi khi gửi giao dịch:", error);
+                alert("Đã xảy ra lỗi khi gửi giao dịch.");
+              }
+            }
+
+            // Gọi API khi trang được tải
+            fetchTransactions();
+
+            // Xử lý form nạp/rút
+            transactionForm.addEventListener("submit", submitTransaction);
           });
-
-          document
-            .getElementById("transactionForm")
-            .addEventListener("submit", function (e) {
-              e.preventDefault();
-
-              const form = e.target;
-              const amount = parseInt(form.amount.value);
-              const type = form.type.value;
-              const description = form.description.value;
-              const date = new Date().toLocaleString("vi-VN");
-
-              if (type === "Rút" && amount > balance) {
-                alert("Số dư không đủ để rút!");
-                return;
-              }
-
-              // Cập nhật số dư
-              if (type === "Nạp") {
-                balance += amount;
-              } else {
-                balance -= amount;
-              }
-
-              // Tạo giao dịch mới
-              const transaction = { date, type, description, amount, balance };
-
-              // 🔥 Thêm vào đầu danh sách để luôn giữ giao dịch mới nhất ở trên
-              transactions.unshift(transaction);
-
-              // 🔥 Giới hạn 10 giao dịch gần nhất
-              if (transactions.length > 10) {
-                transactions = transactions.slice(0, 10);
-              }
-
-              // Lưu vào localStorage
-              localStorage.setItem("balance", balance);
-              localStorage.setItem(
-                "transactions",
-                JSON.stringify(transactions)
-              );
-
-              // Cập nhật UI
-              updateBalance();
-              renderTransactions();
-
-              form.reset();
-            });
-
-          function updateBalance() {
-            document.getElementById("balance").textContent =
-              balance.toLocaleString();
-          }
-
-          function renderTransactions() {
-            const tbody = document.getElementById("transactionTableBody");
-            tbody.innerHTML = "";
-
-            transactions.forEach((t) => {
-              const row = document.createElement("tr");
-              row.innerHTML = `
-        <td>${t.date}</td>
-        <td>${t.type}</td>
-        <td>${t.description || ""}</td>
-        <td>${t.amount.toLocaleString()} VNĐ</td>
-        <td>${t.balance.toLocaleString()} VNĐ</td>
-      `;
-              tbody.appendChild(row);
-            });
-          }
         </script>
 
         <script src="js/navbar.js"></script>
