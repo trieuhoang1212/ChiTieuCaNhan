@@ -1,54 +1,76 @@
 <?php
-// thuchi.php - API cho quản lý thu/chi (tương tự style tichluy.php)
-// Endpoints:
-//   GET  /PHP/thuchi.php?id=123        -> lấy 1 giao dịch (id)
-//   GET  /PHP/thuchi.php                -> lấy danh sách giao dịch (mặc định 50 bản ghi mới nhất)
-//   POST /PHP/thuchi.php                -> thêm giao dịch (body JSON)
+/**
+ * thuchi.php - API quản lý thu/chi (bảng thuchi)
+ *
+ * GET:
+ *   /thuchi.php              -> { success, data: { transactions: [...], currentBalance? } }
+ *   /thuchi.php?id=123       -> { success, data: { id, ... } }
+ * POST (JSON or form):
+ *   body: { loai:'Thu'|'Chi' | type:'income'|'expense', so_tien|amount, ngay|date, mo_ta|note,
+ *           fullname, account, bank, saveContact }
+ *   -> tạo giao dịch; nếu có bảng naprut sẽ ghi sổ để đồng bộ số dư
+ * DELETE:
+ *   /thuchi.php?id=123       -> xoá giao dịch (và hoàn trả sổ naprut nếu có)
+ * POST?action=deleteTransaction (JSON {id}) -> xoá giao dịch
+ */
 
 declare(strict_types=1);
 
+// CORS
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') { http_response_code(200); exit; }
 
 require_once __DIR__ . '/db.php';
 
-// Nếu project đã có các helper (body_json, json_ok, json_err) thì không ghi đè
-if (!function_exists('body_json')) {
-	function body_json(): array {
-		$raw = file_get_contents('php://input');
-		if (!$raw) return [];
-		$data = json_decode($raw, true);
-		return is_array($data) ? $data : [];
-	}
+// ----- Helpers (trả JSON theo format success/data) -----
+function respond_ok($data = [], int $code = 200): void {
+	http_response_code($code);
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
 }
-if (!function_exists('json_ok')) {
-	function json_ok($data = null): void {
-		header('Content-Type: application/json; charset=utf-8');
-		echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
-	}
+function respond_err(string $error, string $message = '', int $code = 400, array $extra = []): void {
+	http_response_code($code);
+	header('Content-Type: application/json; charset=utf-8');
+	$p = ['success' => false, 'error' => $error];
+	if ($message !== '') $p['message'] = $message;
+	if ($extra) $p['extra'] = $extra;
+	echo json_encode($p, JSON_UNESCAPED_UNICODE);
 }
-if (!function_exists('json_err')) {
-	function json_err(string $code, string $message, int $http = 400): void {
-		header('Content-Type: application/json; charset=utf-8');
-		http_response_code($http);
-		echo json_encode(['success' => false, 'error' => ['code' => $code, 'message' => $message]], JSON_UNESCAPED_UNICODE);
-	}
+function body_json_assoc(): array {
+	$raw = file_get_contents('php://input');
+	if (!$raw) return [];
+	$j = json_decode($raw, true);
+	return is_array($j) ? $j : [];
 }
 
-function map_tx_to_client(array $r): array {
+// ----- Balance helpers using bảng `naprut` -----
+function naprut_exists(PDO $pdo): bool {
+	try {
+		$pdo->query('SELECT 1 FROM `naprut` LIMIT 1');
+		return true;
+	} catch (Throwable $e) { return false; }
+}
+function get_current_balance(PDO $pdo): int {
+	try {
+		$stmt = $pdo->query('SELECT so_du_sau FROM `naprut` ORDER BY id DESC LIMIT 1');
+		$v = $stmt->fetchColumn();
+		return $v !== false ? (int)$v : 0;
+	} catch (Throwable $e) { return 0; }
+}
+
+function map_tx(array $r): array {
 	return [
 		'id' => (int)$r['id'],
-		'loai' => $r['loai'], // 'Thu' | 'Chi'
+		'loai' => $r['loai'],
+		'type' => ($r['loai'] === 'Thu') ? 'income' : 'expense',
 		'so_tien' => (int)$r['so_tien'],
+		'amount' => (int)$r['so_tien'],
 		'ngay' => $r['ngay'],
-		'mo_ta' => $r['mo_ta'],
-		'nguoi_giao_dich' => $r['fullname'] ?? null,
-		'so_tai_khoan' => $r['account'] ?? null,
-		' ngan_hang' => $r['bank'] ?? null,
-		'nguoi_giao_dich_id' => isset($r['nguoi_giao_dich_id']) ? (int)$r['nguoi_giao_dich_id'] : null,
-		'createdAt' => $r['ngay_tao'] ?? null,
+		'date' => $r['ngay'],
+		'mo_ta' => $r['mo_ta'] ?? null,
+		'note' => $r['mo_ta'] ?? null,
 	];
 }
 
@@ -59,91 +81,162 @@ try {
 	if ($method === 'GET') {
 		$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 		if ($id > 0) {
-			$stmt = $pdo->prepare('SELECT g.*, d.ho_ten AS fullname, d.so_tai_khoan AS account, d.ngan_hang AS bank
-				FROM GiaoDich g LEFT JOIN DanhBa d ON g.nguoi_giao_dich_id = d.id WHERE g.id = ?');
-			$stmt->execute([$id]);
-			$row = $stmt->fetch();
-			if (!$row) { json_err('NOT_FOUND', 'Không tìm thấy giao dịch', 404); exit; }
-			json_ok(map_tx_to_client($row));
+			$st = $pdo->prepare('SELECT t.*, d.ho_ten, d.so_tai_khoan, d.ngan_hang
+								 FROM thuchi t
+								 LEFT JOIN danhba d ON t.nguoi_giao_dich_id = d.id
+								 WHERE t.id = ?');
+			$st->execute([$id]);
+			$row = $st->fetch(PDO::FETCH_ASSOC);
+			if (!$row) { respond_err('NOT_FOUND', 'Không tìm thấy giao dịch', 404); exit; }
+			respond_ok(map_tx($row));
 			exit;
 		}
 
-		// lấy danh sách (mặc định 50 bản ghi)
-		$limit = isset($_GET['limit']) ? min(200, (int)$_GET['limit']) : 50;
-		$stmt = $pdo->prepare('SELECT g.*, d.ho_ten AS fullname, d.so_tai_khoan AS account, d.ngan_hang AS bank
-			FROM GiaoDich g LEFT JOIN DanhBa d ON g.nguoi_giao_dich_id = d.id
-			ORDER BY g.ngay DESC, g.id DESC LIMIT ?');
-		$stmt->bindValue(1, $limit, PDO::PARAM_INT);
-		$stmt->execute();
-		$rows = $stmt->fetchAll();
-		$out = array_map('map_tx_to_client', $rows);
-		json_ok(['transactions' => $out]);
+		$limit = isset($_GET['limit']) ? max(1, min(1000, (int)$_GET['limit'])) : 200;
+		$st = $pdo->prepare('SELECT t.*, d.ho_ten, d.so_tai_khoan, d.ngan_hang
+							  FROM thuchi t
+							  LEFT JOIN danhba d ON t.nguoi_giao_dich_id = d.id
+							  ORDER BY t.ngay DESC, t.id DESC
+							  LIMIT ?');
+		$st->bindValue(1, $limit, PDO::PARAM_INT);
+		$st->execute();
+		$rows = $st->fetchAll(PDO::FETCH_ASSOC);
+		$txs = array_map('map_tx', $rows);
+		$currentBalance = naprut_exists($pdo) ? get_current_balance($pdo) : null;
+		respond_ok(['transactions' => $txs, 'currentBalance' => $currentBalance]);
 		exit;
 	}
 
-	if ($method === 'POST') {
-		$b = body_json();
-		$loai = isset($b['loai']) && $b['loai'] === 'Chi' ? 'Chi' : 'Thu';
-		$so_tien = isset($b['so_tien']) ? (int)$b['so_tien'] : 0;
-		$ngay = isset($b['ngay']) ? $b['ngay'] : date('Y-m-d H:i:s');
-		$mo_ta = isset($b['mo_ta']) ? trim($b['mo_ta']) : null;
-		$contact_id = isset($b['contact_id']) ? (int)$b['contact_id'] : 0;
-		$fullname = isset($b['fullname']) ? trim($b['fullname']) : '';
-		$account = isset($b['account']) ? trim($b['account']) : '';
-		$bank = isset($b['bank']) ? trim($b['bank']) : '';
-		$saveContact = !empty($b['saveContact']);
+	if ($method === 'POST' && !(isset($_GET['action']) && $_GET['action'] === 'deleteTransaction')) {
+		// Add transaction
+		$data = body_json_assoc();
+		if (empty($data) && !empty($_POST)) $data = $_POST;
 
-		if ($so_tien <= 0) { json_err('INVALID_AMOUNT', 'Số tiền không hợp lệ', 400); exit; }
+		$loai = $data['loai'] ?? null;
+		if (!$loai && isset($data['type'])) {
+			$loai = ($data['type'] === 'expense') ? 'Chi' : 'Thu';
+		}
+		$loai = ($loai === 'Chi') ? 'Chi' : 'Thu';
 
-		// Lấy số dư hiện tại từ bảng naprut (dòng mới nhất)
-		$bal = (int)($pdo->query('SELECT so_du_sau FROM naprut ORDER BY id DESC LIMIT 1')->fetchColumn() ?: 0);
-		if ($loai === 'Chi' && $so_tien > $bal) { json_err('INSUFFICIENT_BALANCE', 'Số dư không đủ', 400); exit; }
+		$so_tien = isset($data['so_tien']) ? (int)$data['so_tien'] : 0;
+		if ($so_tien <= 0 && isset($data['amount'])) $so_tien = (int)$data['amount'];
+		if ($so_tien <= 0) { respond_err('INVALID_AMOUNT', 'Số tiền không hợp lệ', 400); exit; }
+
+		$ngay = $data['ngay'] ?? ($data['date'] ?? '');
+		// Chuẩn hoá về YYYY-MM-DD cho cột DATE
+		if ($ngay === '' || strlen($ngay) < 10) $ngay = date('Y-m-d');
+		else $ngay = substr($ngay, 0, 10);
+
+		$mo_ta = trim((string)($data['mo_ta'] ?? ($data['note'] ?? '')));
+		$fullname = trim((string)($data['fullname'] ?? ''));
+		$account = trim((string)($data['account'] ?? ''));
+		$bank = trim((string)($data['bank'] ?? ''));
+		$saveContact = !empty($data['saveContact']);
 
 		$pdo->beginTransaction();
 		try {
-			// lưu danh bạ nếu cần và chưa có contact_id
-			if ($contact_id <= 0 && $saveContact && $fullname !== '' && $account !== '' && $bank !== '') {
-				$ins = $pdo->prepare('INSERT INTO DanhBa (ho_ten, so_tai_khoan, ngan_hang) VALUES (?, ?, ?)');
-				$ins->execute([$fullname, $account, $bank]);
-				$contact_id = (int)$pdo->lastInsertId();
+			$contact_id = 0;
+			if ($saveContact && $fullname !== '' && $account !== '' && $bank !== '') {
+				// Kiểm tra tồn tại
+				$chk = $pdo->prepare('SELECT id FROM danhba WHERE so_tai_khoan = ? AND ngan_hang = ? LIMIT 1');
+				$chk->execute([$account, $bank]);
+				$ex = $chk->fetchColumn();
+				if ($ex) $contact_id = (int)$ex; else {
+					$insC = $pdo->prepare('INSERT INTO danhba (ho_ten, so_tai_khoan, ngan_hang) VALUES (?, ?, ?)');
+					$insC->execute([$fullname, $account, $bank]);
+					$contact_id = (int)$pdo->lastInsertId();
+				}
 			}
 
-			// Lưu giao dịch vào GiaoDich
-			$insGd = $pdo->prepare('INSERT INTO GiaoDich (loai, so_tien, ngay, mo_ta, nguoi_giao_dich_id) VALUES (?, ?, ?, ?, ?)');
-			$insGd->execute([$loai, $so_tien, $ngay, $mo_ta, $contact_id > 0 ? $contact_id : null]);
+			// Nếu có bảng naprut thì kiểm tra số dư khi chi
+			if (naprut_exists($pdo) && $loai === 'Chi') {
+				$bal = get_current_balance($pdo);
+				if ($so_tien > $bal) { throw new RuntimeException('INSUFFICIENT_BALANCE'); }
+			}
+
+			// Thêm giao dịch
+			$ins = $pdo->prepare('INSERT INTO thuchi (loai, so_tien, ngay, mo_ta, nguoi_giao_dich_id) VALUES (?, ?, ?, ?, ?)');
+			$ins->execute([$loai, $so_tien, $ngay, $mo_ta !== '' ? $mo_ta : null, $contact_id > 0 ? $contact_id : null]);
 			$txId = (int)$pdo->lastInsertId();
 
-			// Cập nhật naprut: ghi 1 dòng Nạp/Rút và so_du_sau mới
-			if ($loai === 'Thu') {
-				$newBal = $bal + $so_tien;
-				$loaiText = 'Nạp';
-			} else {
-				$newBal = $bal - $so_tien;
-				$loaiText = 'Rút';
+			// Ghi sổ naprut (nếu có) để cập nhật số dư
+			$newBal = null;
+			if (naprut_exists($pdo)) {
+				$bal = get_current_balance($pdo);
+				$newBal = ($loai === 'Thu') ? ($bal + $so_tien) : ($bal - $so_tien);
+				$loaiN = ($loai === 'Thu') ? 'Nạp' : 'Rút';
+				$desc = ($mo_ta !== '' ? ($mo_ta . ' - ') : '') . ($fullname !== '' ? $fullname : '');
+				$now = date('Y-m-d H:i:s');
+				$insN = $pdo->prepare('INSERT INTO naprut (ngay, loai, mo_ta, so_tien, so_du_sau) VALUES (?, ?, ?, ?, ?)');
+				$insN->execute([$now, $loaiN, $desc, $so_tien, $newBal]);
 			}
-			$ngayNow = date('Y-m-d H:i:s');
-			$moTaNaprut = ($mo_ta ? $mo_ta . ' - ' : '') . ($fullname ?: ($contact_id ? 'Người trong danh bạ' : 'Không rõ'));
-			$insNap = $pdo->prepare('INSERT INTO naprut (ngay, loai, mo_ta, so_tien, so_du_sau) VALUES (?, ?, ?, ?, ?)');
-			$insNap->execute([$ngayNow, $loaiText, $moTaNaprut, $so_tien, $newBal]);
 
 			$pdo->commit();
 
-			// Trả về dữ liệu giao dịch mới
-			$stmt = $pdo->prepare('SELECT g.*, d.ho_ten AS fullname, d.so_tai_khoan AS account, d.ngan_hang AS bank
-				FROM GiaoDich g LEFT JOIN DanhBa d ON g.nguoi_giao_dich_id = d.id WHERE g.id = ?');
-			$stmt->execute([$txId]);
-			$row = $stmt->fetch();
-			json_ok(['transaction' => map_tx_to_client($row), 'currentBalance' => $newBal]);
+			// Trả lại giao dịch vừa thêm (có join danh bạ)
+			$st = $pdo->prepare('SELECT t.*, d.ho_ten, d.so_tai_khoan, d.ngan_hang
+								  FROM thuchi t LEFT JOIN danhba d ON t.nguoi_giao_dich_id = d.id WHERE t.id = ?');
+			$st->execute([$txId]);
+			$row = $st->fetch(PDO::FETCH_ASSOC);
+			respond_ok(['transaction' => map_tx($row), 'currentBalance' => $newBal]);
 			exit;
 		} catch (Throwable $e) {
 			$pdo->rollBack();
-			json_err('ADD_FAILED', $e->getMessage(), 500);
+			if ($e->getMessage() === 'INSUFFICIENT_BALANCE') {
+				respond_err('INSUFFICIENT_BALANCE', 'Số dư không đủ', 400);
+			} else {
+				respond_err('ADD_FAILED', $e->getMessage(), 500);
+			}
+			exit;
 		}
 	}
 
-	json_err('METHOD_NOT_ALLOWED', 'Phương thức không được hỗ trợ', 405);
+	if ($method === 'DELETE' || ($method === 'POST' && (isset($_GET['action']) && $_GET['action'] === 'deleteTransaction'))) {
+		// Xoá giao dịch
+		$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+		if ($id <= 0) {
+			$b = body_json_assoc();
+			if (!empty($b['id'])) $id = (int)$b['id'];
+		}
+		if ($id <= 0) { respond_err('INVALID_ID', 'ID không hợp lệ', 400); exit; }
+
+		$pdo->beginTransaction();
+		try {
+			$st = $pdo->prepare('SELECT * FROM thuchi WHERE id = ? FOR UPDATE');
+			$st->execute([$id]);
+			$tx = $st->fetch(PDO::FETCH_ASSOC);
+			if (!$tx) { throw new RuntimeException('NOT_FOUND'); }
+
+			$newBal = null;
+			if (naprut_exists($pdo)) {
+				$bal = get_current_balance($pdo);
+				$amount = (int)$tx['so_tien'];
+				// Hoàn trả: nếu xoá Thu -> Rút; nếu xoá Chi -> Nạp
+				$loaiN = ($tx['loai'] === 'Thu') ? 'Rút' : 'Nạp';
+				$newBal = ($loaiN === 'Nạp') ? ($bal + $amount) : ($bal - $amount);
+				$now = date('Y-m-d H:i:s');
+				$desc = 'Hoàn trả do xoá giao dịch #' . $id . ($tx['mo_ta'] ? (': ' . $tx['mo_ta']) : '');
+				$insN = $pdo->prepare('INSERT INTO naprut (ngay, loai, mo_ta, so_tien, so_du_sau) VALUES (?, ?, ?, ?, ?)');
+				$insN->execute([$now, $loaiN, $desc, $amount, $newBal]);
+			}
+
+			$del = $pdo->prepare('DELETE FROM thuchi WHERE id = ?');
+			$del->execute([$id]);
+
+			$pdo->commit();
+			respond_ok(['deleted' => $id, 'currentBalance' => $newBal]);
+			exit;
+		} catch (Throwable $e) {
+			$pdo->rollBack();
+			if ($e->getMessage() === 'NOT_FOUND') respond_err('NOT_FOUND', 'Không tìm thấy giao dịch', 404);
+			else respond_err('DELETE_FAILED', $e->getMessage(), 500);
+			exit;
+		}
+	}
+
+	respond_err('METHOD_NOT_ALLOWED', 'Phương thức không được hỗ trợ', 405);
 } catch (Throwable $e) {
-	json_err('SERVER_ERROR', $e->getMessage(), 500);
+	respond_err('SERVER_ERROR', $e->getMessage(), 500);
 }
 
 ?>

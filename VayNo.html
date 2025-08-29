@@ -210,134 +210,138 @@
         let loans = [];
         let balance = 0;
 
-        // Lấy dữ liệu khi load
-        document.addEventListener("DOMContentLoaded", () => {
-          balance = parseInt(localStorage.getItem("balance")) || 0;
-          document.getElementById("currentBalance").textContent =
-            balance.toLocaleString() + " VNĐ";
+        // Hàm lấy số dư từ server
+        async function fetchBalance() {
+          try {
+            const response = await fetch("PHP/naprut.php?balanceOnly=1");
+            const data = await response.json();
+            if (data.success) {
+              balance = data.currentBalance;
+              document.getElementById("currentBalance").textContent =
+                balance.toLocaleString() + " VNĐ";
+            } else {
+              alert("Không thể lấy số dư: " + data.message);
+            }
+          } catch (error) {
+            console.error("Lỗi khi lấy số dư:", error);
+          }
+        }
 
-          const savedLoans = localStorage.getItem("loans");
-          if (savedLoans) loans = JSON.parse(savedLoans);
+        // Hàm lấy danh sách khoản vay từ server
+        async function fetchLoans() {
+          try {
+            const response = await fetch("PHP/vayno.php");
+            const data = await response.json();
+            if (data.success) {
+              loans = data.loans;
+              renderLoans();
+            } else {
+              alert("Không thể lấy danh sách khoản vay: " + data.message);
+            }
+          } catch (error) {
+            console.error("Lỗi khi lấy danh sách khoản vay:", error);
+          }
+        }
 
-          renderLoans();
-        });
+        // Hàm tính tiền trả góp trung bình mỗi tháng
+        function calculateMonthlyPayment(amount, months) {
+          return Math.ceil(amount / months);
+        }
 
-        // Tạo khoản vay
+        // Hàm hiển thị danh sách khoản vay với tính năng trả góp
+        function renderLoans() {
+          const container = document.getElementById("loansList");
+          container.innerHTML = "";
+
+          loans.forEach((loan) => {
+            const monthlyPayment = calculateMonthlyPayment(loan.amount, loan.months);
+
+            const card = document.createElement("div");
+            card.className = "card p-3 mb-3";
+            card.innerHTML = `
+              <h5>${loan.loanName}</h5>
+              <p><strong>Số tiền vay:</strong> ${loan.amount.toLocaleString()} VNĐ</p>
+              <p><strong>Số tháng trả góp:</strong> ${loan.months}</p>
+              <p><strong>Tiền trả mỗi tháng:</strong> ${monthlyPayment.toLocaleString()} VNĐ</p>
+              <p><strong>Ngày bắt đầu:</strong> ${loan.startDate}</p>
+              <button class="btn btn-danger btn-sm" onclick="deleteLoan(${loan.id}, ${loan.amount})">🗑️ Xóa khoản vay</button>
+            `;
+            container.appendChild(card);
+          });
+        }
+
+        // Hàm xóa khoản vay
+        async function deleteLoan(id, amount) {
+          if (confirm("Bạn có chắc muốn xoá khoản vay này?")) {
+            try {
+              const response = await fetch("PHP/vayno.php", {
+                method: "DELETE",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ id }),
+              });
+              const data = await response.json();
+              if (data.success) {
+                balance -= amount; // Trừ số tiền đã vay khỏi số dư
+                document.getElementById("currentBalance").textContent =
+                  balance.toLocaleString() + " VNĐ";
+                alert("Khoản vay đã được xoá thành công!");
+                fetchLoans(); // Cập nhật danh sách khoản vay
+              } else {
+                alert("Không thể xoá khoản vay: " + data.message);
+              }
+            } catch (error) {
+              console.error("Lỗi khi xoá khoản vay:", error);
+            }
+          }
+        }
+
+        // Cập nhật số dư sau khi tạo khoản vay
+        async function createLoan(loanData) {
+          try {
+            const response = await fetch("PHP/vayno.php", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(loanData),
+            });
+            const data = await response.json();
+            if (data.success) {
+              balance = data.newBalance;
+              document.getElementById("currentBalance").textContent =
+                balance.toLocaleString() + " VNĐ";
+              alert("Khoản vay được thêm thành công!");
+            } else {
+              alert("Không thể tạo khoản vay: " + data.message);
+            }
+          } catch (error) {
+            console.error("Lỗi khi tạo khoản vay:", error);
+          }
+        }
+
+        // Sửa sự kiện submit form để gọi API
         document
           .getElementById("loanForm")
           .addEventListener("submit", function (e) {
             e.preventDefault();
             const form = e.target;
-            const loanName = form.loanName.value;
-            const amount = parseInt(form.amount.value);
-            const months = parseInt(form.months.value);
-            const editLoanId = form.editLoanId.value;
-            const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-            if (amount <= 15000000 && months > 12) {
-              alert("❌ Khoản vay từ 1-15 triệu chỉ được trả tối đa 12 tháng!");
-              return;
-            }
-
-            const monthlyPayment = Math.ceil(amount / months);
-
-            if (editLoanId) {
-              const idx = loans.findIndex((l) => l.id == editLoanId);
-              if (idx > -1) {
-                balance -= loans[idx].amount; // trừ số dư cũ
-                loans[idx].loanName = loanName;
-                loans[idx].amount = amount;
-                loans[idx].months = months;
-                loans[idx].monthlyPayment = monthlyPayment;
-                loans[idx].startDate = today;
-              }
-            } else {
-              loans.push({
-                id: Date.now(),
-                loanName,
-                amount,
-                months,
-                monthlyPayment,
-                startDate: today,
-              });
-            }
-
-            balance += amount; // Khi vay tiền, tăng số dư
-            localStorage.setItem("balance", balance);
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
-
-            localStorage.setItem("loans", JSON.stringify(loans));
-            renderLoans();
+            const loanData = {
+              loanName: form.loanName.value,
+              amount: parseInt(form.amount.value),
+              months: parseInt(form.months.value),
+              startDate: new Date().toISOString().split("T")[0],
+            };
+            createLoan(loanData);
             form.reset();
-            form.editLoanId.value = "";
           });
 
-        // Xóa khoản vay
-        function deleteLoan(id) {
-          const loan = loans.find((l) => l.id === id);
-          if (!loan) return;
-          if (confirm("Bạn có chắc muốn xoá khoản vay này?")) {
-            balance -= loan.amount;
-            localStorage.setItem("balance", balance);
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
-
-            loans = loans.filter((l) => l.id !== id);
-            localStorage.setItem("loans", JSON.stringify(loans));
-            renderLoans();
-          }
-        }
-
-        // Tính ngày trả góp tiếp theo
-        function getNextPaymentDate(startDate, monthsPaid) {
-          const start = new Date(startDate);
-          start.setMonth(start.getMonth() + monthsPaid);
-          return start;
-        }
-
-        // Render danh sách khoản vay
-        function renderLoans() {
-          const container = document.getElementById("loansList");
-          container.innerHTML = "";
-
-          loans.forEach((loan, index) => {
-            // Giả sử đang trả tháng đầu tiên
-            const nextPayment = getNextPaymentDate(loan.startDate, 1);
-            const today = new Date();
-            const isDue = nextPayment.toDateString() === today.toDateString();
-
-            const card = document.createElement("div");
-            card.className = "card p-3 mb-3";
-            card.innerHTML = `
-      <h5>${loan.loanName}</h5>
-      <p><strong>Số tiền vay:</strong> ${loan.amount.toLocaleString()} VNĐ</p>
-      <p><strong>Số tháng trả góp:</strong> ${loan.months}</p>
-      <p><strong>Tiền trả mỗi tháng:</strong> ${loan.monthlyPayment.toLocaleString()} VNĐ</p>
-      <p><strong>Ngày trả góp tiếp theo:</strong> ${nextPayment.toLocaleDateString()}</p>
-      ${
-        isDue
-          ? '<p class="text-danger"><strong>⚠️ Hôm nay là ngày trả góp!</strong></p>'
-          : ""
-      }
-      <button class="btn btn-danger btn-sm" onclick="deleteLoan(${
-        loan.id
-      })">🗑️ Xóa</button>
-    `;
-            container.appendChild(card);
-          });
-        }
-
-        // Kiểm tra nhắc nhở trả góp mỗi ngày
-        setInterval(() => {
-          const today = new Date();
-          loans.forEach((loan) => {
-            const nextPayment = getNextPaymentDate(loan.startDate, 1); // tháng đầu tiên
-            if (nextPayment.toDateString() === today.toDateString()) {
-              alert(`⚠️ Hôm nay là ngày trả góp khoản vay "${loan.loanName}"!`);
-            }
-          });
-        }, 24 * 60 * 60 * 1000); // kiểm tra mỗi 24h
+        // Gọi hàm fetchBalance và fetchLoans khi tải trang
+        document.addEventListener("DOMContentLoaded", () => {
+          fetchBalance();
+          fetchLoans();
+        });
       </script>
     </div>
   </body>

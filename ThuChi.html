@@ -254,6 +254,7 @@
       <script src="lib/easing/easing.min.js"></script>
       <script src="lib/waypoints/waypoints.min.js"></script>
       <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+      <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
 
       <!-- Template Javascript -->
       <script src="js/main.js"></script>
@@ -263,11 +264,24 @@
         let transactions = [];
         let contacts = [];
 
+        async function fetchCurrentBalance() {
+          try {
+            const response = await fetch("PHP/naprut.php?balanceOnly=1");
+            const data = await response.json();
+            if (data.success) {
+              balance = data.currentBalance;
+              document.getElementById("currentBalance").textContent =
+                balance.toLocaleString() + " VNĐ";
+            } else {
+              console.error("Failed to fetch balance:", data.message);
+            }
+          } catch (error) {
+            console.error("Error fetching balance:", error);
+          }
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-          // lấy số dư
-          balance = parseInt(localStorage.getItem("balance")) || 0;
-          document.getElementById("currentBalance").textContent =
-            balance.toLocaleString() + " VNĐ";
+          fetchCurrentBalance();
 
           // lấy giao dịch đã lưu
           const saved = localStorage.getItem("transactions");
@@ -376,15 +390,15 @@
               renderContacts();
             }
 
-            // cập nhật số dư
-            if (type === "income") balance += amount;
-            else balance -= amount;
+            // cập nhật số dư chỉ khi loại giao dịch là "Chi"
+            if (type === "expense") {
+              balance -= amount;
+              localStorage.setItem("balance", balance);
+              document.getElementById("currentBalance").textContent =
+                balance.toLocaleString() + " VNĐ";
+            }
 
-            localStorage.setItem("balance", balance);
             localStorage.setItem("transactions", JSON.stringify(transactions));
-
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
 
             renderTransactions();
             form.reset();
@@ -396,15 +410,7 @@
           if (!t) return;
 
           if (confirm("Bạn có chắc muốn xoá giao dịch này?")) {
-            // hoàn trả số dư
-            if (t.type === "income") balance -= t.amount;
-            else balance += t.amount;
-
-            localStorage.setItem("balance", balance);
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
-
-            // xoá
+            // xoá giao dịch mà không thay đổi số dư
             transactions = transactions.filter((x) => x.id !== id);
             localStorage.setItem("transactions", JSON.stringify(transactions));
 
@@ -431,23 +437,81 @@
                 "card p-3 mb-2 border-" +
                 (t.type === "income" ? "success" : "danger");
 
-              card.innerHTML = `
-            <p><strong>${
-              t.type === "income" ? "➕ Thu" : "➖ Chi"
-            }</strong> - ${t.amount.toLocaleString()} VNĐ</p>
-            <p><strong>Ngày:</strong> ${t.date}</p>
-            <p><strong>Mô tả:</strong> ${t.note || "(không)"} </p>
-            <p><strong>Người giao dịch:</strong> ${t.fullname} - ${
-                t.account
-              } (${t.bank})</p>
-            <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${
-              t.id
-            })">🗑️ Xoá giao dịch</button>
+              let cardContent = `
+          <p><strong>${
+            t.type === "income" ? "➕ Thu" : "➖ Chi"
+          }</strong> - ${t.amount.toLocaleString()} VNĐ</p>
+          <p><strong>Ngày:</strong> ${t.date}</p>
+          <p><strong>Mô tả:</strong> ${t.note || "(không)"} </p>
+          <p><strong>Người giao dịch:</strong> ${t.fullname} - ${
+          t.account
+        } (${t.bank})</p>
+          <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${t.id})">🗑️ Xoá giao dịch</button>
+        `;
+
+              if (t.type === "income") {
+                cardContent += `
+            <div class="text-center mt-3">
+              <img src="img/qr.png" alt="QR Code" width="128" height="128" onclick="openModal(this.src)" style="cursor: pointer;" />
+              <small class="text-muted">Quét mã QR để nhận tiền</small>
+            </div>
           `;
+              }
+
+              card.innerHTML = cardContent;
               container.appendChild(card);
             });
         }
+
+        function openModal(src) {
+          const modal = document.getElementById("qrModal");
+          const modalImage = document.getElementById("modalImage");
+          modalImage.src = src;
+          modal.style.display = "block";
+        }
+
+        function closeModal() {
+          const modal = document.getElementById("qrModal");
+          modal.style.display = "none";
+        }
       </script>
+
+      <style>
+        /* Modal styles */
+        #qrModal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          overflow: auto;
+          background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        #qrModal img {
+          margin: auto;
+          display: block;
+          max-width: 90%;
+          max-height: 90%;
+        }
+
+        #qrModal .close {
+          position: absolute;
+          top: 10px;
+          right: 20px;
+          color: white;
+          font-size: 30px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+      </style>
+
+      <div id="qrModal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img id="modalImage" src="" alt="QR Code" />
+      </div>
 
       <script src="js/navbar.js"></script>
     </div>

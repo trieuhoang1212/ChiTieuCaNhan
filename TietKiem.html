@@ -194,6 +194,14 @@
                   id="interestRateInput"
                   readonly />
               </div>
+              <div class="col-md-6">
+                <label class="form-label">Phương thức trả lãi</label>
+                <select class="form-control" name="payoutMethod" id="payoutMethodSelect" required>
+                  <option value="cuoi_ky" selected>Cuối kỳ</option>
+                  <option value="hang_thang">Hàng tháng</option>
+                  <option value="hang_quy">Hàng quý</option>
+                </select>
+              </div>
               <div class="col-12">
                 <input type="hidden" id="editSavingId" name="editSavingId" />
                 <button type="submit" class="btn btn-success">
@@ -201,6 +209,11 @@
                 </button>
               </div>
             </form>
+            <div
+              id="interestPreview"
+              class="alert alert-secondary mt-3 small"
+              role="alert"
+              style="display: none"></div>
           </div>
         </div>
 
@@ -232,17 +245,52 @@
     <script>
       let savings = [];
       let balance = 0;
+      const DEFAULT_NON_TERM_RATE = 0.3; // %/năm - tối thiểu cho không kỳ hạn
+
+      // Helpers
+      function toVND(n) {
+        return Number(n).toLocaleString() + " VNĐ";
+      }
+
+      function refreshBalance() {
+        return fetch("PHP/naprut.php?balanceOnly=1")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success) {
+              balance = Number(data.currentBalance) || 0;
+              document.getElementById("currentBalance").textContent =
+                toVND(balance);
+            }
+          });
+      }
+
+      function refreshSavings() {
+        return fetch("PHP/tietkiem.php")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success) {
+              savings = data.savings || [];
+              renderSavings();
+            }
+          });
+      }
 
       // Lấy dữ liệu khi load
       document.addEventListener("DOMContentLoaded", () => {
-        balance = Number(localStorage.getItem("balance")) || 0;
-        document.getElementById("currentBalance").textContent =
-          balance.toLocaleString() + " VNĐ";
-
-        const savedSavings = localStorage.getItem("savings");
-        if (savedSavings) savings = JSON.parse(savedSavings);
-
-        renderSavings();
+        Promise.all([refreshBalance(), refreshSavings()])
+          .then(() => {
+            // Thiết lập lãi suất mặc định theo kỳ hạn hiện tại
+            const termEl = document.getElementById("termSelect");
+            const rateEl = document.getElementById("interestRateInput");
+            const term = Number(termEl.value);
+            let rate = 0;
+            if (term === 0) rate = DEFAULT_NON_TERM_RATE;
+            else if (term >= 1 && term <= 12) rate = 4;
+            else if (term >= 13 && term <= 36) rate = 6;
+            rateEl.value = rate;
+            updateInterestPreview();
+          })
+          .catch(console.error);
       });
 
       // Tự động gán lãi suất theo kỳ hạn
@@ -251,11 +299,11 @@
         .addEventListener("change", function () {
           const term = Number(this.value);
           let rate = 0;
-          if (term === 0) rate = 0.3;
+          if (term === 0) rate = DEFAULT_NON_TERM_RATE;
           else if (term >= 1 && term <= 12) rate = 4;
           else if (term >= 13 && term <= 36) rate = 6;
-
           document.getElementById("interestRateInput").value = rate;
+          updateInterestPreview();
         });
 
       // Hàm tính ngày kết thúc
@@ -272,99 +320,219 @@
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
-      // Hàm tính lãi dự kiến
+      // Hàm tính lãi dự kiến (sửa lỗi dùng sai startDate)
       function calculateInterest(amount, interestRate, startDate, term) {
+        const amt = Number(amount) || 0;
+        const rate = Number(interestRate) || 0;
         if (term === 0) {
-          // không kỳ hạn → tính lãi 1 năm
-          return amount * (interestRate / 100);
+          // không kỳ hạn → ước tính lãi 1 năm
+          return amt * (rate / 100);
         } else {
-          const startDate = new Date();
-          const endDate = getEndDate(startDate, term);
-          const days = getRemainingDays(endDate);
+          const sDate = new Date(startDate);
+          const eDate = getEndDate(sDate, term);
+          const days = getRemainingDays(eDate);
           if (days <= 0) return 0;
-          return amount * (interestRate / 100) * (days / 365);
+          return amt * (rate / 100) * (days / 365);
         }
       }
 
-      // Tạo hoặc chỉnh sửa sổ tiết kiệm
+      // Hàm tính lãi theo số tháng: nhập số tiền, %/năm, số tháng, có gộp lãi hay không
+      // Trả về: { lai, tongTien, kieu, laiSuatThang, soThang }
+      function tinhLaiTheoThang(soTien, laiSuatNam, soThang, gopLai = false) {
+        const principal = Number(soTien) || 0;
+        const annualRate = Number(laiSuatNam) || 0; // %/năm
+        const months = Math.max(0, Number(soThang) || 0);
+        const monthlyRate = annualRate / 100 / 12; // hệ số theo tháng
+
+        if (principal <= 0 || annualRate < 0 || months === 0) {
+          return {
+            lai: 0,
+            tongTien: principal,
+            kieu: gopLai ? "gop_lai" : "khong_gop_lai",
+            laiSuatThang: monthlyRate,
+            soThang: months,
+          };
+        }
+
+        let interest = 0;
+        let total = principal;
+
+        if (gopLai) {
+          // Lãi kép theo tháng
+          total = principal * Math.pow(1 + monthlyRate, months);
+          interest = total - principal;
+        } else {
+          // Lãi đơn theo tháng (quy đổi tỷ lệ năm sang số tháng)
+          interest = principal * (annualRate / 100) * (months / 12);
+          total = principal + interest;
+        }
+
+        return {
+          lai: interest,
+          tongTien: total,
+          kieu: gopLai ? "gop_lai" : "khong_gop_lai",
+          laiSuatThang: monthlyRate,
+          soThang: months,
+        };
+      }
+
+      // Lãi không kỳ hạn: tính theo số ngày thực tế (actual/365)
+      function tinhLaiKhongKyHan(
+        soTien,
+        laiSuatNam,
+        startDate,
+        denNgay = null
+      ) {
+        const principal = Number(soTien) || 0;
+        const annualRate = Number(laiSuatNam) || 0;
+        const start = new Date(startDate);
+        const end = denNgay ? new Date(denNgay) : new Date();
+        const ms = end - start;
+        const days = Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+        const interest = principal * (annualRate / 100) * (days / 365);
+        return {
+          lai: interest,
+          soNgay: days,
+          denNgay: end.toISOString().split("T")[0],
+        };
+      }
+
+      // Tạo sổ tiết kiệm: Rút tiền từ số dư (naprut.php) rồi lưu sổ (tietkiem.php)
       document
         .getElementById("savingForm")
-        .addEventListener("submit", function (e) {
+        .addEventListener("submit", async function (e) {
           e.preventDefault();
           const form = e.target;
           const savingName = form.savingName.value.trim();
           const amount = Number(form.amount.value);
           const term = Number(form.term.value);
-          const interestRate = Number(form.interestRate.value);
-          const editSavingId = form.editSavingId.value;
+          let interestRate = Number(form.interestRate.value);
+          if (term === 0 && (!interestRate || interestRate <= 0)) interestRate = DEFAULT_NON_TERM_RATE;
           const today = new Date().toISOString().split("T")[0];
 
-          if (amount <= 0) {
-            alert("❌ Số tiền gửi phải lớn hơn 0!");
-            return;
-          }
+          if (!savingName) return alert("❌ Vui lòng nhập tên sổ tiết kiệm!");
+          if (amount <= 0) return alert("❌ Số tiền gửi phải lớn hơn 0!");
 
-          if (!savingName) {
-            alert("❌ Vui lòng nhập tên sổ tiết kiệm!");
-            return;
-          }
+          // Cập nhật số dư mới nhất trước khi kiểm tra
+          await refreshBalance();
+          if (amount > balance)
+            return alert("❌ Số dư không đủ để gửi tiết kiệm!");
 
-          if (editSavingId) {
-            const idx = savings.findIndex((s) => s.id === Number(editSavingId));
-            if (idx > -1) {
-              balance += savings[idx].amount; // trả lại số tiền cũ
-              if (amount > balance) {
-                alert("❌ Số dư không đủ để gửi tiết kiệm!");
-                balance -= savings[idx].amount; // hoàn lại
-                return;
-              }
-              savings[idx] = {
-                id: Number(editSavingId),
-                savingName,
-                amount,
-                term,
-                interestRate,
-                startDate: today,
-              };
-            }
-          } else {
-            if (amount > balance) {
-              alert("❌ Số dư không đủ để gửi tiết kiệm!");
+          try {
+            // 1) Rút tiền khỏi số dư
+            const withdrawRes = await fetch("PHP/naprut.php", {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded;charset=UTF-8",
+              },
+              body: new URLSearchParams({
+                loai: "Rút",
+                so_tien: String(amount),
+                mo_ta: `Gửi tiết kiệm: ${savingName}`,
+              }),
+            }).then((r) => r.json());
+
+            if (!withdrawRes.success) {
+              alert(
+                "❌ Không thể rút tiền: " +
+                  (withdrawRes.message || "Lỗi không xác định")
+              );
               return;
             }
-            savings.push({
-              id: Date.now(),
-              savingName,
-              amount,
-              term,
-              interestRate,
-              startDate: today,
+
+            // 2) Lưu sổ tiết kiệm
+            const payoutMethodEl = document.getElementById('payoutMethodSelect');
+            const payoutMethod = payoutMethodEl ? payoutMethodEl.value : 'cuoi_ky';
+
+            const saveRes = await fetch("PHP/tietkiem.php", {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded;charset=UTF-8",
+              },
+              body: new URLSearchParams({
+                savingName,
+                amount: String(amount),
+                term: String(term),
+                interestRate: String(interestRate),
+                startDate: today,
+                payoutMethod
+              }),
+            }).then((r) => r.json());
+
+            if (!saveRes.success) {
+              // Rollback: nạp lại tiền nếu tạo sổ thất bại
+              await fetch("PHP/naprut.php", {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/x-www-form-urlencoded;charset=UTF-8",
+                },
+                body: new URLSearchParams({
+                  loai: "Nạp",
+                  so_tien: String(amount),
+                  mo_ta: `Hoàn tiền do lỗi tạo sổ: ${savingName}`,
+                }),
+              });
+              alert(
+                "❌ Không thể tạo sổ tiết kiệm: " +
+                  (saveRes.message || "Lỗi không xác định")
+              );
+              return;
+            }
+
+            // Làm mới dữ liệu
+            await Promise.all([refreshBalance(), refreshSavings()]);
+            form.reset();
+            document.getElementById("interestRateInput").value = "";
+            alert("✅ Tạo sổ tiết kiệm thành công!");
+          } catch (err) {
+            console.error(err);
+            alert("❌ Lỗi kết nối máy chủ.");
+          }
+        });
+
+      // Xóa sổ tiết kiệm: xóa DB rồi nạp lại tiền về số dư
+      async function deleteSaving(id, amount, name) {
+        if (!confirm("Bạn có chắc muốn xóa sổ tiết kiệm này?")) return;
+        try {
+          // 1) Xóa sổ
+          const delRes = await fetch("PHP/tietkiem.php", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            },
+            body: new URLSearchParams({ id: String(id) }),
+          }).then((r) => r.json());
+
+          if (!delRes.success) {
+            alert(
+              "❌ Không thể xóa sổ: " + (delRes.message || "Lỗi không xác định")
+            );
+            return;
+          }
+
+          // 2) Nạp lại tiền
+          if (Number(amount) > 0) {
+            await fetch("PHP/naprut.php", {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded;charset=UTF-8",
+              },
+              body: new URLSearchParams({
+                loai: "Nạp",
+                so_tien: String(amount),
+                mo_ta: `Tất toán sổ tiết kiệm: ${name || id}`,
+              }),
             });
           }
 
-          balance -= amount;
-          localStorage.setItem("balance", balance);
-          document.getElementById("currentBalance").textContent =
-            balance.toLocaleString() + " VNĐ";
-          localStorage.setItem("savings", JSON.stringify(savings));
-          renderSavings();
-          form.reset();
-          form.editSavingId.value = "";
-        });
-
-      // Xóa sổ tiết kiệm
-      function deleteSaving(id) {
-        const saving = savings.find((s) => s.id === id);
-        if (!saving) return;
-        if (confirm("Bạn có chắc muốn xóa sổ tiết kiệm này?")) {
-          balance += saving.amount;
-          localStorage.setItem("balance", balance);
-          document.getElementById("currentBalance").textContent =
-            balance.toLocaleString() + " VNĐ";
-
-          savings = savings.filter((s) => s.id !== id);
-          localStorage.setItem("savings", JSON.stringify(savings));
-          renderSavings();
+          await Promise.all([refreshBalance(), refreshSavings()]);
+        } catch (err) {
+          console.error(err);
+          alert("❌ Lỗi kết nối máy chủ.");
         }
       }
 
@@ -373,42 +541,184 @@
         const container = document.getElementById("savingsList");
         container.innerHTML = "";
 
-        if (savings.length === 0) {
+        if (!savings || savings.length === 0) {
           container.innerHTML = "<p>Chưa có sổ tiết kiệm nào.</p>";
           return;
         }
 
         savings.forEach((s) => {
-          const endDate = getEndDate(s.startDate, s.term);
-          const remainingDays = getRemainingDays(endDate);
-          const interest = calculateInterest(
-            s.amount,
-            s.interestRate,
-            s.startDate,
-            s.term
-          );
+          const startDate = s.startDate;
+
+          let endDate = null;
+          let remainingDays = 0;
+          let interest = 0;
+          let extraRows = "";
+
+          if (Number(s.term) === 0) {
+            // Không kỳ hạn: tính theo số ngày thực tế đến hôm nay
+            const nkh = tinhLaiKhongKyHan(s.amount, s.interestRate, startDate);
+            interest = nkh.lai;
+            extraRows = `
+              <p><strong>Ngày gửi:</strong> ${startDate}</p>
+              <p><strong>Kỳ hạn:</strong> Không kỳ hạn</p>
+              <p><strong>Số ngày đã gửi:</strong> ${nkh.soNgay} ngày</p>
+              <p><strong>Lãi ước tính đến ${nkh.denNgay}:</strong> ${Number(
+              interest
+            ).toLocaleString(undefined, { maximumFractionDigits: 0 })} VNĐ</p>
+            `;
+          } else {
+            // Có kỳ hạn
+            endDate =
+              s.endDate ||
+              getEndDate(startDate, s.term).toISOString().split("T")[0];
+            remainingDays = getRemainingDays(new Date(endDate));
+            interest = calculateInterest(
+              s.amount,
+              s.interestRate,
+              startDate,
+              s.term
+            );
+            extraRows = `
+              <p><strong>Ngày gửi:</strong> ${startDate}</p>
+              <p><strong>Ngày đáo hạn:</strong> ${endDate}</p>
+              <p><strong>Số ngày còn lại:</strong> ${
+                remainingDays > 0 ? remainingDays : 0
+              } ngày</p>
+              <p><strong>Lãi dự kiến:</strong> ${Number(
+                interest
+              ).toLocaleString(undefined, { maximumFractionDigits: 0 })} VNĐ</p>
+            `;
+          }
+
+          const pm = s.payoutMethod || s.phuong_thuc_lai || 'cuoi_ky';
+          const pmText = pm === 'hang_thang' ? 'Hàng tháng' : pm === 'hang_quy' ? 'Hàng quý' : 'Cuối kỳ';
 
           const card = document.createElement("div");
           card.className = "card p-3 mb-3";
           card.innerHTML = `
             <h5>${s.savingName}</h5>
-            <p><strong>Số tiền gửi:</strong> ${s.amount.toLocaleString()} VNĐ</p>
-            <p><strong>Kỳ hạn:</strong> ${s.term} tháng</p>
+            <p><strong>Số tiền gửi:</strong> ${Number(
+              s.amount
+            ).toLocaleString()} VNĐ</p>
             <p><strong>Lãi suất:</strong> ${s.interestRate}%/năm</p>
-            <p><strong>Số ngày còn lại:</strong> ${
-              remainingDays > 0 ? remainingDays : 0
-            } ngày</p>
-            <p><strong>Lãi dự kiến:</strong> ${interest.toLocaleString(
-              undefined,
-              { maximumFractionDigits: 0 }
-            )} VNĐ</p>
-            <button class="btn btn-danger btn-sm" onclick="deleteSaving(${
-              s.id
-            })">🗑️ Xóa</button>
+            <p><strong>Phương thức trả lãi:</strong> ${pmText}</p>
+            ${extraRows}
+            <div class="d-flex gap-2 align-items-end flex-wrap">
+              <div>
+                <label class="form-label mb-1">Rút một phần (VNĐ)</label>
+                <input type="number" class="form-control form-control-sm" id="withdraw-${
+                  s.id
+                }" min="1" max="${s.amount}" placeholder="Nhập số tiền" />
+              </div>
+              <button class="btn btn-outline-primary btn-sm" id="btn-withdraw-${
+                s.id
+              }">💸 Rút</button>
+              <button class="btn btn-danger btn-sm" id="btn-delete-${
+                s.id
+              }">🗑️ Xóa</button>
+            </div>
           `;
           container.appendChild(card);
+
+          // Sự kiện rút một phần
+          document
+            .getElementById(`btn-withdraw-${s.id}`)
+            .addEventListener("click", async () => {
+              const input = document.getElementById(`withdraw-${s.id}`);
+              const val = Number(input.value);
+              if (!val || val <= 0) return alert("Nhập số tiền hợp lệ.");
+              if (val > Number(s.amount))
+                return alert("Vượt quá số tiền trong sổ.");
+
+              try {
+                // Rút khỏi sổ
+                const res = await fetch("PHP/tietkiem.php", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type":
+                      "application/x-www-form-urlencoded;charset=UTF-8",
+                  },
+                  body: new URLSearchParams({
+                    action: "withdraw",
+                    id: String(s.id),
+                    withdrawAmount: String(val),
+                  }),
+                }).then((r) => r.json());
+
+                if (!res.success) {
+                  alert("Không thể rút: " + (res.message || "Lỗi"));
+                  return;
+                }
+
+                // Nạp về số dư
+                await fetch("PHP/naprut.php", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type":
+                      "application/x-www-form-urlencoded;charset=UTF-8",
+                  },
+                  body: new URLSearchParams({
+                    loai: "Nạp",
+                    so_tien: String(val),
+                    mo_ta: `Rút từ sổ TK: ${s.savingName}`,
+                  }),
+                });
+
+                await Promise.all([refreshBalance(), refreshSavings()]);
+              } catch (e) {
+                console.error(e);
+                alert("Lỗi kết nối máy chủ.");
+              }
+            });
+
+          // Sự kiện xóa
+          document
+            .getElementById(`btn-delete-${s.id}`)
+            .addEventListener("click", () => {
+              deleteSaving(s.id, s.amount, s.savingName);
+            });
         });
       }
+
+      // Hiển thị preview lãi theo kỳ hạn khi người dùng nhập
+      function updateInterestPreview() {
+        const name = document.querySelector('[name="savingName"]').value.trim();
+        const amount = Number(document.querySelector('[name="amount"]').value);
+        const term = Number(document.querySelector('[name="term"]').value);
+        const rate = Number(
+          document.querySelector('[name="interestRate"]').value
+        );
+        const box = document.getElementById("interestPreview");
+        if (!amount || !rate) {
+          box.style.display = "none";
+          return;
+        }
+        const kqDon = tinhLaiTheoThang(amount, rate, term, false);
+        const kqGop = tinhLaiTheoThang(amount, rate, term, true);
+        box.style.display = "";
+        box.innerHTML = `
+          <div><strong>Ước tính lãi ${term} tháng</strong>${
+          name ? ` cho "${name}"` : ""
+        }:</div>
+          <div>- Lãi đơn: <b>${Number(
+            kqDon.lai
+          ).toLocaleString()}</b> (Tổng: ${Number(
+          kqDon.tongTien
+        ).toLocaleString()} VNĐ)</div>
+          <div>- Lãi kép: <b>${Number(
+            kqGop.lai
+          ).toLocaleString()}</b> (Tổng: ${Number(
+          kqGop.tongTien
+        ).toLocaleString()} VNĐ)</div>
+        `;
+      }
+
+      ["savingName", "amount", "term", "interestRate"].forEach((n) => {
+        const el = document.querySelector(`[name="${n}"]`);
+        if (el) el.addEventListener("input", updateInterestPreview);
+        if (el && n === "term")
+          el.addEventListener("change", updateInterestPreview);
+      });
     </script>
   </body>
 </html>

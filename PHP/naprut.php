@@ -39,6 +39,15 @@ function getCurrentBalance($conn) {
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
+    // Nếu có query ?balanceOnly=1, chỉ trả về số dư hiện tại
+    $balanceOnly = isset($_GET['balanceOnly']) ? (int)$_GET['balanceOnly'] : 0;
+    if ($balanceOnly === 1) {
+        $bal = getCurrentBalance($conn);
+        echo json_encode(["success" => true, "currentBalance" => $bal]);
+        $conn->close();
+        exit();
+    }
+
     $limit = 50;
     $stmt = $conn->prepare("SELECT id, ngay, loai, mo_ta, so_tien, so_du_sau FROM naprut ORDER BY id DESC LIMIT ?");
     $stmt->bind_param("i", $limit);
@@ -81,24 +90,22 @@ if ($method === 'POST') {
         }
     }
 
-    // Nếu không phải JSON, thử dùng $_POST (x-www-form-urlencoded hoặc form-data)
-    if (!is_array($data) || empty($data)) {
-        if (!empty($_POST)) {
-            $data = $_POST;
-        }
-    }
+            // Nếu không phải JSON, thử dùng $_POST (x-www-form-urlencoded hoặc form-data)
+            if (!is_array($data) || empty($data)) {
+                if (!empty($_POST)) {
+                    $data = $_POST;
+                }
+            }
 
-    if (!is_array($data) || empty($data)) {
-        http_response_code(400);
-        echo json_encode([
-            "success" => false,
-            "message" => "Dữ liệu không hợp lệ. Gửi JSON (application/json) hoặc form-data (x-www-form-urlencoded)."
-        ]);
-        $conn->close();
-        exit();
-    }
-
-    // Lấy giá trị (dùng cả trường từ JSON hoặc form)
+            if (!is_array($data) || empty($data)) {
+                http_response_code(400);
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Dữ liệu không hợp lệ. Gửi JSON (application/json) hoặc form-data (x-www-form-urlencoded)."
+                ]);
+                $conn->close();
+                exit();
+            }    // Lấy giá trị (dùng cả trường từ JSON hoặc form)
     $loai = isset($data['loai']) ? trim($data['loai']) : '';
     $so_tien = isset($data['so_tien']) ? (int)$data['so_tien'] : 0;
     $mo_ta = isset($data['mo_ta']) ? trim($data['mo_ta']) : '';
