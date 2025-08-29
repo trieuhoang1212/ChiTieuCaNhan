@@ -11,7 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Kết nối cơ sở dữ liệu
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -23,7 +22,7 @@ if ($conn->connect_error) {
     echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);
     exit();
 }
-$conn->set_charset("utf8");
+$conn->set_charset("utf8mb4");
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -51,8 +50,9 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     $danh_muc = $data['danh_muc'] ?? '';
-    $so_tien = $data['so_tien'] ?? 0;
+    $so_tien = isset($data['so_tien']) ? (int)$data['so_tien'] : 0;
     $ngay = date('Y-m-d H:i:s');
+    $month = date('Y-m');
 
     if (empty($danh_muc) || $so_tien <= 0) {
         http_response_code(400);
@@ -61,6 +61,29 @@ if ($method === 'POST') {
         exit();
     }
 
+    // Lấy giới hạn tháng hiện tại
+    $stmtLimit = $conn->prepare("SELECT id, so_tien FROM gioihan WHERE thang_nam=? ORDER BY id DESC LIMIT 1");
+    $stmtLimit->bind_param("s", $month);
+    $stmtLimit->execute();
+    $resLimit = $stmtLimit->get_result();
+    $rowLimit = $resLimit->fetch_assoc();
+    $stmtLimit->close();
+
+    if (!$rowLimit || $rowLimit['so_tien'] < $so_tien) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Vượt quá giới hạn tháng!"]);
+        $conn->close();
+        exit();
+    }
+
+    // Trừ giới hạn tháng
+    $newLimit = $rowLimit['so_tien'] - $so_tien;
+    $stmtUpdateLimit = $conn->prepare("UPDATE gioihan SET so_tien=? WHERE id=?");
+    $stmtUpdateLimit->bind_param("ii", $newLimit, $rowLimit['id']);
+    $stmtUpdateLimit->execute();
+    $stmtUpdateLimit->close();
+
+    // Thêm khoản chi vào chitieu
     $stmt = $conn->prepare("INSERT INTO chitieu (ngay, danh_muc, so_tien) VALUES (?, ?, ?)");
     if (!$stmt) {
         http_response_code(500);
@@ -70,12 +93,67 @@ if ($method === 'POST') {
     }
     $stmt->bind_param("ssi", $ngay, $danh_muc, $so_tien);
     $stmt->execute();
-    echo json_encode(["success" => true, "message" => "Thêm khoản chi thành công."]);
     $stmt->close();
+
+    echo json_encode(["success" => true, "message" => "Thêm khoản chi thành công."]);
     $conn->close();
     exit();
 }
 
+if ($method === 'DELETE') {
+    $data = json_decode(file_get_contents("php://input"), true);
+    $id = isset($data['id']) ? (int)$data['id'] : 0;
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Thiếu id khoản chi"]);
+        $conn->close();
+        exit();
+    }
+
+    // Lấy khoản chi cần xoá
+    $stmt = $conn->prepare("SELECT so_tien, ngay FROM chitieu WHERE id=?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$row) {
+        http_response_code(404);
+        echo json_encode(["success" => false, "message" => "Không tìm thấy khoản chi"]);
+        $conn->close();
+        exit();
+    }
+
+    $so_tien = (int)$row['so_tien'];
+    $month = substr($row['ngay'], 0, 7); // Lấy tháng từ ngày khoản chi
+
+    // Hoàn lại vào giới hạn tháng
+    $stmtLimit = $conn->prepare("SELECT id, so_tien FROM gioihan WHERE thang_nam=? ORDER BY id DESC LIMIT 1");
+    $stmtLimit->bind_param("s", $month);
+    $stmtLimit->execute();
+    $resLimit = $stmtLimit->get_result();
+    $rowLimit = $resLimit->fetch_assoc();
+    $stmtLimit->close();
+
+    if ($rowLimit) {
+        $newLimit = $rowLimit['so_tien'] + $so_tien;
+        $stmtUpdateLimit = $conn->prepare("UPDATE gioihan SET so_tien=? WHERE id=?");
+        $stmtUpdateLimit->bind_param("ii", $newLimit, $rowLimit['id']);
+        $stmtUpdateLimit->execute();
+        $stmtUpdateLimit->close();
+    }
+
+    // Xoá khoản chi
+    $stmtDel = $conn->prepare("DELETE FROM chitieu WHERE id=?");
+    $stmtDel->bind_param("i", $id);
+    $stmtDel->execute();
+    $stmtDel->close();
+
+    echo json_encode(["success" => true, "message" => "Đã xoá khoản chi và hoàn lại giới hạn"]);
+    $conn->close();
+    exit();
+}
 
 // Phương thức không được hỗ trợ
 http_response_code(405);

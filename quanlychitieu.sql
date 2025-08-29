@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th8 28, 2025 lúc 05:04 PM
+-- Thời gian đã tạo: Th8 29, 2025 lúc 08:25 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.0.30
 
@@ -29,27 +29,31 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `chitieu` (
   `id` int(11) NOT NULL,
-  `ngay` datetime NOT NULL,
-  `danh_muc` enum('','') NOT NULL,
+  `danh_muc` varchar(255) NOT NULL,
   `so_tien` int(11) NOT NULL,
-  `so_tien_chi` int(11) NOT NULL
-
+  `ngay` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `gioi_han`
+-- Cấu trúc bảng cho bảng `gioihan`
 --
 
-CREATE TABLE `gioi_han` (
+CREATE TABLE `gioihan` (
   `id` int(11) NOT NULL,
-  `nam` year(4) NOT NULL,
-  `thang` tinyint(4) NOT NULL,
-  `so_tien_gioi_han` bigint(20) NOT NULL,
-  `gioi_han_con_lai` bigint(20) NOT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+  `so_tien` int(11) NOT NULL,
+  `thang_nam` varchar(7) NOT NULL,
+  `ngay` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `gioihan`
+--
+
+INSERT INTO `gioihan` (`id`, `so_tien`, `thang_nam`, `ngay`) VALUES
+(3, 0, '2025-08', '2025-08-29 08:50:31');
 
 -- --------------------------------------------------------
 
@@ -79,7 +83,56 @@ INSERT INTO `naprut` (`id`, `ngay`, `loai`, `mo_ta`, `so_tien`, `so_du_sau`) VAL
 (9, '2025-08-28 16:42:48', 'Nạp', 'Nạp tiền ví', 1000000, 6000000),
 (10, '2025-08-28 16:43:02', 'Rút', 'Nạp tiền ví', 1000000, 5000000),
 (11, '2025-08-28 16:45:32', 'Nạp', 'đi học', 1000, 5001000),
-(12, '2025-08-28 16:45:55', 'Rút', 'trả tiền xe', 1000, 5000000);
+(12, '2025-08-28 16:45:55', 'Rút', 'trả tiền xe', 1000, 5000000),
+(13, '2025-08-28 17:54:56', 'Nạp', 'Tiền Lương tháng này', 1000000, 6000000),
+(14, '2025-08-29 03:51:37', '', 'Đặt giới hạn tháng', 222, 5999778),
+(15, '2025-08-29 03:52:07', '', 'Bỏ giới hạn tháng', 222, 6000000),
+(16, '2025-08-29 03:53:57', '', 'Đặt giới hạn tháng', 1000000, 5000000),
+(17, '2025-08-29 03:54:01', '', 'Bỏ giới hạn tháng', 1000000, 6000000),
+(18, '2025-08-29 03:54:08', '', 'Đặt giới hạn tháng', 10000, 5990000),
+(19, '2025-08-29 03:54:28', '', 'Bỏ giới hạn tháng', 10000, 6000000),
+(20, '2025-08-29 03:54:47', '', 'Đặt giới hạn tháng', 100000, 5900000),
+(21, '2025-08-29 04:00:43', '', 'Bỏ giới hạn tháng', 100000, 6000000),
+(22, '2025-08-29 04:03:14', '', 'Đặt giới hạn tháng', 10000, 5990000),
+(23, '2025-08-29 04:04:16', '', 'Sức khỏe', 1, 5989999),
+(24, '2025-08-29 04:04:41', '', 'Bỏ giới hạn tháng', 9999, 5999998),
+(25, '2025-08-29 04:05:07', 'Nạp', '', 2, 6000000),
+(26, '2025-08-29 04:05:28', '', 'Đặt giới hạn tháng', 3666666, 2333334),
+(27, '2025-08-29 04:05:47', '', 'Hóa đơn điện nước', 300000, 2033334),
+(28, '2025-08-29 04:06:29', '', 'Bỏ giới hạn tháng', 3366666, 5400000),
+(29, '2025-08-29 04:06:59', '', 'Đặt giới hạn tháng', 400000, 5000000),
+(30, '2025-08-29 04:07:11', '', 'Du lịch', 2000, 4998000),
+(31, '2025-08-29 04:07:20', '', 'Bỏ giới hạn tháng', 398000, 5396000),
+(32, '2025-08-29 04:07:40', 'Rút', '', 96, 5395904),
+(33, '2025-08-29 04:08:14', 'Rút', 'Tiền Lương tháng này', 95904, 5300000),
+(34, '2025-08-29 04:08:30', 'Nạp', 'Tiền Lương tháng này', 700000, 6000000),
+(35, '2025-08-29 04:08:41', 'Nạp', 'Tiền Lương tháng này', 1000000000, 1006000000),
+(36, '2025-08-29 04:09:06', 'Rút', 'Tiền Lương tháng này', 1006000000, 0),
+(37, '2025-08-29 04:09:16', 'Nạp', 'Test', 2147483647, 2147483647),
+(38, '2025-08-29 04:09:25', 'Nạp', 'Test', 2147483647, 2147483647),
+(39, '2025-08-29 04:11:31', 'Rút', 'test', 999999999, 1147483648),
+(40, '2025-08-29 04:20:41', '', 'Bỏ giới hạn tháng', 100000, 1147583648),
+(41, '2025-08-29 04:20:49', '', 'Đặt giới hạn tháng', 10000000, 1137583648),
+(42, '2025-08-29 04:20:54', '', 'Bỏ giới hạn tháng', 10000000, 1147583648),
+(43, '2025-08-29 04:21:08', '', 'Đặt giới hạn tháng', 2000000, 1145583648),
+(44, '2025-08-29 04:24:03', '', 'Bỏ giới hạn tháng', 1990000, 1147573648),
+(45, '2025-08-29 04:24:09', '', 'Đặt giới hạn tháng', 200000, 1147373648),
+(46, '2025-08-29 04:26:23', '', 'Bỏ giới hạn tháng', 512000, 1147885648),
+(47, '2025-08-29 04:30:47', 'Rút', '', 1147885648, 0),
+(48, '2025-08-29 04:31:04', 'Nạp', 'Tiền Lương tháng này', 1000000, 1000000),
+(49, '2025-08-29 04:31:07', 'Nạp', 'Tiền Lương tháng này', 1000000, 2000000),
+(50, '2025-08-29 04:31:09', 'Nạp', 'Tiền Lương tháng này', 1000000, 3000000),
+(51, '2025-08-29 04:31:11', 'Nạp', 'Tiền Lương tháng này', 1000000, 4000000),
+(52, '2025-08-29 04:31:12', 'Nạp', 'Tiền Lương tháng này', 1000000, 5000000),
+(53, '2025-08-29 04:31:14', 'Nạp', 'Tiền Lương tháng này', 1000000, 6000000),
+(54, '2025-08-29 04:31:16', 'Nạp', 'Tiền Lương tháng này', 1000000, 7000000),
+(55, '2025-08-29 04:31:18', 'Nạp', 'Tiền Lương tháng này', 1000000, 8000000),
+(56, '2025-08-29 04:31:19', 'Nạp', 'Tiền Lương tháng này', 1000000, 9000000),
+(57, '2025-08-29 04:31:21', 'Nạp', 'Tiền Lương tháng này', 1000000, 10000000),
+(58, '2025-08-29 04:31:41', '', 'Đặt giới hạn tháng', 5000000, 5000000),
+(59, '2025-08-29 04:32:41', '', 'Bỏ giới hạn tháng', 5000000, 10000000),
+(60, '2025-08-29 07:53:28', '', 'Đặt giới hạn tháng', 10000, 9990000),
+(61, '2025-08-29 07:53:39', '', 'Bỏ giới hạn tháng', 10000, 10000000);
 
 -- --------------------------------------------------------
 
@@ -112,7 +165,41 @@ CREATE TABLE `sodu` (
 --
 
 INSERT INTO `sodu` (`id`, `so_tien`, `ngay`) VALUES
-(1, 1000000, '2025-08-28 21:15:46');
+(1, 1000000, '2025-08-28 21:15:46'),
+(4, 1010000, '2025-08-29 08:46:17'),
+(5, 10000, '2025-08-29 08:47:02'),
+(6, -90000, '2025-08-29 08:47:31'),
+(7, -2312222, '2025-08-29 08:47:55'),
+(8, -2412222, '2025-08-29 08:50:31'),
+(9, -2422222, '2025-08-29 09:11:17'),
+(10, -2522222, '2025-08-29 09:11:39');
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `tichluy`
+--
+
+CREATE TABLE `tichluy` (
+  `id` int(11) NOT NULL,
+  `ten_muc_tieu` varchar(255) NOT NULL,
+  `so_tien_muc_tieu` bigint(20) NOT NULL,
+  `ngay_bat_dau` date NOT NULL,
+  `ngay_ket_thuc` date NOT NULL,
+  `so_ngay` int(11) NOT NULL,
+  `so_tien_trung_binh_ngay` bigint(20) NOT NULL,
+  `so_tien_da_tich_luy` bigint(20) NOT NULL DEFAULT 0,
+  `trang_thai` enum('dang_tich_luy','hoan_thanh','huy') NOT NULL DEFAULT 'dang_tich_luy',
+  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
+  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `tichluy`
+--
+
+INSERT INTO `tichluy` (`id`, `ten_muc_tieu`, `so_tien_muc_tieu`, `ngay_bat_dau`, `ngay_ket_thuc`, `so_ngay`, `so_tien_trung_binh_ngay`, `so_tien_da_tich_luy`, `trang_thai`, `ngay_tao`, `ngay_cap_nhat`) VALUES
+(1, 'Mua Xe', 10000000, '2025-08-29', '2028-07-14', 1050, 9524, 0, 'dang_tich_luy', '2025-08-29 06:02:56', '2025-08-29 06:02:56');
 
 --
 -- Chỉ mục cho các bảng đã đổ
@@ -125,11 +212,10 @@ ALTER TABLE `chitieu`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `gioi_han`
+-- Chỉ mục cho bảng `gioihan`
 --
-ALTER TABLE `gioi_han`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `id_nguoi_dung` (`id_nguoi_dung`,`nam`,`thang`);
+ALTER TABLE `gioihan`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Chỉ mục cho bảng `naprut`
@@ -158,19 +244,19 @@ ALTER TABLE `sodu`
 -- AUTO_INCREMENT cho bảng `chitieu`
 --
 ALTER TABLE `chitieu`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- AUTO_INCREMENT cho bảng `gioi_han`
+-- AUTO_INCREMENT cho bảng `gioihan`
 --
-ALTER TABLE `gioi_han`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `gioihan`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT cho bảng `naprut`
 --
 ALTER TABLE `naprut`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT cho bảng `nguoi_dung`
@@ -182,17 +268,14 @@ ALTER TABLE `nguoi_dung`
 -- AUTO_INCREMENT cho bảng `sodu`
 --
 ALTER TABLE `sodu`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 --
--- Các ràng buộc cho các bảng đã đổ
+-- Chỉ mục và AUTO_INCREMENT cho bảng `tichluy`
 --
-
---
--- Các ràng buộc cho bảng `gioi_han`
---
-ALTER TABLE `gioi_han`
-  ADD CONSTRAINT `gioi_han_ibfk_1` FOREIGN KEY (`id_nguoi_dung`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE;
+ALTER TABLE `tichluy`
+  ADD PRIMARY KEY (`id`);
+ALTER TABLE `tichluy`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

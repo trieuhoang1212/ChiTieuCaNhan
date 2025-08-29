@@ -135,10 +135,10 @@
             </nav>
           </div>
         </div>
-      </div>
+        </div>
 
-      <body class="bg-light">
-        <div class="container py-5">
+        <div class="bg-light">
+          <div class="container py-5">
           <h2 class="mb-4">Kế hoạch Tích Luỹ</h2>
 
           <!-- Số dư hiện có -->
@@ -151,14 +151,14 @@
             <form id="planForm" class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Tên mục tiêu</label>
-                <input type="text" class="form-control" name="goal" required />
+                <input type="text" class="form-control" name="goal" id="goal" required />
               </div>
               <div class="col-md-6">
                 <label class="form-label">Số tiền mục tiêu (VNĐ)</label>
                 <input
                   type="number"
                   class="form-control"
-                  name="target"
+                  name="target" id="target"
                   min="1000"
                   required />
               </div>
@@ -167,7 +167,7 @@
                 <input
                   type="date"
                   class="form-control"
-                  name="startDate"
+                  name="startDate" id="startDate"
                   required />
               </div>
               <div class="col-md-6">
@@ -175,7 +175,7 @@
                 <input
                   type="date"
                   class="form-control"
-                  name="endDate"
+                  name="endDate" id="endDate"
                   required />
               </div>
               <div class="col-12">
@@ -212,203 +212,212 @@
           let plans = [];
           let balance = 0;
 
-          document.addEventListener("DOMContentLoaded", () => {
-            // Lấy số dư từ NapRut.html
-            balance = parseInt(localStorage.getItem("balance")) || 0;
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
+          // Fetch balance from naprut.php
+          async function fetchBalance() {
+            try {
+              const res = await fetch('PHP/naprut.php');
+              const data = await res.json();
+              if (data.success) {
+                balance = data.transactions[0]?.so_du_sau || 0;
+                document.getElementById('currentBalance').textContent = balance.toLocaleString() + ' VNĐ';
+              } else {
+                console.error('Failed to fetch balance:', data.message);
+              }
+            } catch (e) {
+              console.error('Error fetching balance:', e);
+            }
+          }
 
-            // Lấy kế hoạch từ localStorage
-            const savedPlans = localStorage.getItem("plans");
-            if (savedPlans) plans = JSON.parse(savedPlans);
+          // Fetch plans from kehoach.php
+          async function fetchPlans() {
+            try {
+              const res = await fetch('PHP/kehoach.php');
+              const data = await res.json();
+              if (data.ok) {
+                plans = data.data || [];
+                renderPlans();
+              } else {
+                console.error(data);
+              }
+            } catch (e) { 
+              console.error(e); 
+            }
+          }
 
-            renderPlans();
+          document.addEventListener('DOMContentLoaded', async () => {
+            await fetchBalance();
+            await fetchPlans();
           });
 
-          // Thêm & sửa kế hoạch
-          document
-            .getElementById("planForm")
-            .addEventListener("submit", function (e) {
-              e.preventDefault();
-              const form = e.target;
-              const goal = form.goal.value;
-              const target = parseInt(form.target.value);
-              const startDate = new Date(form.startDate.value);
-              const endDate = new Date(form.endDate.value);
-              const editId = form.editId.value; // hidden input để biết có đang sửa không
+          // Thêm & sửa kế hoạch (gửi API)
+          document.getElementById('planForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = e.target;
+            const payload = {
+              goal: form.goal.value,
+              target: parseInt(form.target.value),
+              startDate: form.startDate.value,
+              endDate: form.endDate.value,
+            };
+            const editId = form.editId.value;
 
-              if (endDate <= startDate) {
-                alert("Ngày kết thúc phải sau ngày bắt đầu!");
-                return;
-              }
+            if (!payload.goal || !payload.target || !payload.startDate || !payload.endDate) {
+              alert('Vui lòng nhập đủ thông tin');
+              return;
+            }
 
-              const days = Math.ceil(
-                (endDate - startDate) / (1000 * 60 * 60 * 24)
-              );
-              const daily = Math.ceil(target / days);
-
+            // Updated error handling for network issues
+            try {
+              let res;
               if (editId) {
-                // sửa kế hoạch
-                const idx = plans.findIndex((p) => p.id == editId);
-                if (idx > -1) {
-                  plans[idx].goal = goal;
-                  plans[idx].target = target;
-                  plans[idx].startDate = form.startDate.value;
-                  plans[idx].endDate = form.endDate.value;
-                  plans[idx].days = days;
-                  plans[idx].daily = daily;
-                }
+                // PUT - Cập nhật (dùng POST + _method để tương thích XAMPP)
+                res = await fetch('PHP/kehoach.php?_method=PUT', { 
+                  method: 'POST', 
+                  headers: { 'Content-Type': 'application/json' }, 
+                  body: JSON.stringify({ id: parseInt(editId), ...payload }) 
+                });
               } else {
-                // thêm mới
-                const plan = {
-                  id: Date.now(),
-                  goal,
-                  target,
-                  startDate: form.startDate.value,
-                  endDate: form.endDate.value,
-                  days,
-                  daily,
-                  saved: 0, // số tiền đã tích luỹ
-                };
-                plans.push(plan);
+                // POST - Thêm mới
+                res = await fetch('PHP/kehoach.php', { 
+                  method: 'POST', 
+                  headers: { 'Content-Type': 'application/json' }, 
+                  body: JSON.stringify(payload) 
+                });
               }
-
-              localStorage.setItem("plans", JSON.stringify(plans));
-
-              renderPlans();
-              form.reset();
-              form.editId.value = "";
-            });
-
-          // Đóng góp vào kế hoạch
-          function contribute(id, amount) {
-            if (!amount || amount <= 0) {
-              alert("❌ Số tiền không hợp lệ!");
-              return;
-            }
-
-            if (amount > balance) {
-              alert("❌ Số dư không đủ để đóng góp!");
-              return;
-            }
-
-            const plan = plans.find((p) => p.id === id);
-            if (!plan) return;
-
-            const remain = plan.target - plan.saved;
-            if (remain <= 0) {
-              alert("✅ Kế hoạch đã hoàn thành!");
-              return;
-            }
-
-            if (amount > remain) {
-              alert("❌ Số tiền vượt quá số tiền còn thiếu!");
-              return;
-            }
-
-            // Trừ tiền khỏi số dư
-            balance -= amount;
-            localStorage.setItem("balance", balance);
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
-
-            // Cập nhật kế hoạch
-            plan.saved += amount;
-            localStorage.setItem("plans", JSON.stringify(plans));
-
-            renderPlans();
-          }
-
-          // Xoá kế hoạch
-          function deletePlan(id) {
-            const plan = plans.find((p) => p.id === id);
-            if (!plan) return;
-
-            if (confirm("Bạn có chắc muốn xoá kế hoạch này?")) {
-              // hoàn trả số tiền đã tích luỹ
-              if (plan.saved > 0) {
-                balance += plan.saved;
-                localStorage.setItem("balance", balance);
-                document.getElementById("currentBalance").textContent =
-                  balance.toLocaleString() + " VNĐ";
+              const data = await res.json();
+              if (data.ok) {
+                await fetchPlans();
+                form.reset();
+                form.editId.value = '';
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.textContent = 'Tạo kế hoạch';
+              } else {
+                alert(data.message || 'Lỗi khi lưu kế hoạch');
               }
+            } catch (err) {
+              console.error('Network error:', err);
+              alert('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+            }
+          });
 
-              // xoá khỏi danh sách kế hoạch
-              plans = plans.filter((p) => p.id !== id);
-              localStorage.setItem("plans", JSON.stringify(plans));
-              renderPlans();
+          // Đóng góp vào kế hoạch qua API
+          async function contribute(id, amount) {
+            if (!amount || amount <= 0) { 
+              alert('❌ Số tiền không hợp lệ!'); 
+              return; 
+            }
+            
+            try {
+              const res = await fetch('PHP/tichluy.php', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ id, amount }) 
+              });
+              const data = await res.json();
+              if (data.ok) {
+                balance = data.data.currentBalance;
+                document.getElementById('currentBalance').textContent = balance.toLocaleString() + ' VNĐ';
+                // cập nhật plan trong mảng
+                const updated = data.data.plan;
+                const idx = plans.findIndex(p => p.id === updated.id);
+                if (idx > -1) plans[idx] = updated;
+                renderPlans();
+              } else {
+                alert(data.message || 'Không thể đóng góp');
+              }
+            } catch (e) { 
+              console.error(e); 
+              alert('Lỗi mạng'); 
             }
           }
 
-          // Sửa kế hoạch
+          // Xoá kế hoạch (API) và hoàn trả đã tích luỹ
+          async function deletePlan(id) {
+            // Defensive guard for missing/invalid id
+            const numId = Number(id);
+            if (id === undefined || id === null || Number.isNaN(numId)) {
+              console.error('deletePlan: invalid id', id);
+              alert('Thiếu id kế hoạch');
+              return;
+            }
+            if (!confirm('Bạn có chắc muốn xoá kế hoạch này?')) return;
+            try {
+              // DELETE - Xoá (dùng POST + _method để tương thích máy chủ không hỗ trợ DELETE)
+              const url = `PHP/kehoach.php?_method=DELETE&id=${encodeURIComponent(numId)}&refund=1`;
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: numId, refund: 1 })
+              });
+              const data = await res.json();
+              if (data.ok) {
+                await fetchBalance();
+                await fetchPlans();
+              } else {
+                alert(data.message || 'Không thể xoá kế hoạch');
+              }
+            } catch (e) {
+              console.error(e);
+              alert('Lỗi mạng');
+            }
+          }
+
+          // Sửa kế hoạch (đổ ngược form)
           function editPlan(id) {
-            const plan = plans.find((p) => p.id === id);
+            const plan = plans.find(p => p.id === id);
             if (!plan) return;
-
-            document.getElementById("goal").value = plan.goal;
-            document.getElementById("target").value = plan.target;
-            document.getElementById("startDate").value = plan.startDate;
-            document.getElementById("endDate").value = plan.endDate;
-            document.getElementById("editId").value = plan.id;
+            const form = document.getElementById('planForm');
+            form.goal.value = plan.goal;
+            form.target.value = plan.target;
+            form.startDate.value = plan.startDate;
+            form.endDate.value = plan.endDate;
+            form.editId.value = plan.id;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.textContent = 'Cập nhật kế hoạch';
           }
 
           // Hiển thị danh sách kế hoạch
           function renderPlans() {
-            const container = document.getElementById("plansList");
-            container.innerHTML = "";
-
+            const container = document.getElementById('plansList');
+            container.innerHTML = '';
             plans.forEach((plan) => {
-              const progress = Math.min(
-                (plan.saved / plan.target) * 100,
-                100
-              ).toFixed(1);
+              const progress = Math.min((plan.saved / plan.target) * 100, 100).toFixed(1);
               const remain = plan.target - plan.saved;
-
-              const card = document.createElement("div");
-              card.className = "card p-3 mb-3";
-
+              const card = document.createElement('div');
+              card.className = 'card p-3 mb-3';
               card.innerHTML = `
-        <h5>${plan.goal}</h5>
-        <p><strong>Mục tiêu:</strong> ${plan.target.toLocaleString()} VNĐ</p>
-        <p><strong>Thời gian:</strong> ${plan.startDate} → ${plan.endDate} (${
-                plan.days
-              } ngày)</p>
-        <p><strong>Trung bình/ngày:</strong> ${plan.daily.toLocaleString()} VNĐ</p>
-        <p><strong>Đã tích luỹ:</strong> ${plan.saved.toLocaleString()} VNĐ</p>
-        <div class="progress mb-2">
-          <div class="progress-bar" role="progressbar" style="width: ${progress}%">
-            ${progress}%
-          </div>
-        </div>
-        <p class="text-${remain > 0 ? "danger" : "success"}">
-          ${
-            remain > 0
-              ? `Còn thiếu ${remain.toLocaleString()} VNĐ`
-              : "🎉 Hoàn thành mục tiêu!"
-          }
-        </p>
-        <div class="input-group mb-2">
-          <input type="number" class="form-control" placeholder="Nhập số tiền muốn đóng góp" min="1" id="contribute-${
-            plan.id
-          }">
-          <button class="btn btn-primary" onclick="contribute(${
-            plan.id
-          }, parseInt(document.getElementById('contribute-${
-                plan.id
-              }').value) || 0)">Đóng góp</button>
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="deletePlan(${
-          plan.id
-        })">🗑️ Xoá</button>
-      `;
-
+                <h5>${plan.goal}</h5>
+                <p><strong>Mục tiêu:</strong> ${plan.target.toLocaleString()} VNĐ</p>
+                <p><strong>Thời gian:</strong> ${plan.startDate} → ${plan.endDate} (${plan.days} ngày)</p>
+                <p><strong>Trung bình/ngày:</strong> ${plan.daily.toLocaleString()} VNĐ</p>
+                <p><strong>Đã tích luỹ:</strong> ${plan.saved.toLocaleString()} VNĐ</p>
+                <div class="progress mb-2">
+                  <div class="progress-bar" role="progressbar" style="width: ${progress}%">${progress}%</div>
+                </div>
+                <p class="text-${remain > 0 ? 'danger' : 'success'}">
+                  ${remain > 0 ? `Còn thiếu ${remain.toLocaleString()} VNĐ` : '🎉 Hoàn thành mục tiêu!'}
+                </p>
+                <div class="input-group mb-2">
+                  <input type="number" class="form-control" placeholder="Nhập số tiền muốn đóng góp" min="1" id="contribute-${plan.id}" ${remain <= 0 ? 'disabled' : ''}>
+                  <button class="btn btn-primary" onclick="contribute(${plan.id}, parseInt(document.getElementById('contribute-${plan.id}').value) || 0)" ${remain <= 0 ? 'disabled' : ''}>Đóng góp</button>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-secondary btn-sm" onclick="editPlan(${plan.id})">✏️ Sửa</button>
+                  <button class="btn btn-danger btn-sm" onclick="deletePlan(${plan.id})">🗑️ Xoá</button>
+                </div>
+              `;
               container.appendChild(card);
             });
           }
+
+          // Expose functions for inline handlers
+          window.contribute = contribute;
+          window.deletePlan = deletePlan;
+          window.editPlan = editPlan;
         </script>
 
         <script src="js/navbar.js"></script>
-      </body>
+      </div>
     </div>
   </body>
 </html>

@@ -232,240 +232,191 @@
           let balance = 0;
           let monthlyLimit = 0;
           let expenses = [];
+          const username = localStorage.getItem("currentUser") || "default";
+          const month = new Date().toISOString().slice(0, 7);
 
           document.addEventListener("DOMContentLoaded", () => {
             const currentBalanceElement =
               document.getElementById("currentBalance");
 
-            // Hàm lấy số dư từ API `naprut.php`
+            // Lấy số dư từ naprut.php
             async function fetchBalance() {
               try {
-                const response = await fetch("PHP/naprut.php", {
-                  method: "GET",
-                });
+                const response = await fetch("PHP/naprut.php");
                 const data = await response.json();
-
                 if (data.success) {
-                  // Cập nhật số dư hiện tại
                   balance = data.transactions[0]?.so_du_sau || 0;
                   currentBalanceElement.textContent =
                     balance.toLocaleString() + " VNĐ";
-                } else {
-                  alert("Không thể tải số dư từ NapRut.");
                 }
               } catch (error) {
-                console.error("Lỗi khi gọi API NapRut:", error);
-                alert("Đã xảy ra lỗi khi tải số dư.");
+                alert("Lỗi khi tải số dư!");
               }
             }
 
-            // Gọi API để lấy số dư khi tải trang
-            fetchBalance();
-          });
-
-          document.addEventListener("DOMContentLoaded", () => {
-            const expenseTableBody =
-              document.getElementById("expenseTableBody");
-            const expenseForm = document.getElementById("expenseForm");
-            const currentBalanceElement =
-              document.getElementById("currentBalance");
-
-            // Hàm lấy danh sách chi tiêu từ API
-            async function fetchExpenses() {
+            // Lấy giới hạn từ gioihan.php
+            async function fetchLimit() {
               try {
-                const response = await fetch("PHP/chitieu.php");
+                const response = await fetch(
+                  `PHP/gioihan.php?username=${username}&thang_nam=${month}`
+                );
                 const data = await response.json();
-
                 if (data.success) {
-                  renderExpenses(data.expenses);
-                } else {
-                  alert("Không thể tải dữ liệu chi tiêu.");
+                  monthlyLimit = data.limit;
+                  document.getElementById("monthlyLimit").textContent =
+                    monthlyLimit.toLocaleString() + " VNĐ";
                 }
               } catch (error) {
-                console.error("Lỗi khi gọi API:", error);
+                alert("Lỗi khi tải giới hạn!");
               }
             }
 
-            // Hàm hiển thị danh sách chi tiêu
-            function renderExpenses(expenses) {
-              expenseTableBody.innerHTML = "";
-              expenses.forEach((expense) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-        <td>${expense.id}</td>
-        <td>${expense.ngay}</td>
-        <td>${expense.danh_muc}</td>
-        <td>${expense.so_tien.toLocaleString()} VNĐ</td>
-        <td>
-          <button class="btn btn-danger btn-sm" onclick="deleteExpense(${
-            expense.id
-          })">Xoá</button>
-        </td>
-      `;
-                expenseTableBody.appendChild(row);
-              });
-            }
-
-            // Hàm thêm khoản chi tiêu
-            expenseForm.addEventListener("submit", async (e) => {
-              e.preventDefault();
-              const category = document.getElementById("category").value;
-              const amount = parseInt(document.getElementById("amount").value);
-
-              if (amount <= 0) {
-                alert("❌ Số tiền phải lớn hơn 0!");
-                return;
-              }
-
-              console.log("Dữ liệu gửi đi:", {
-                danh_muc: category,
-                so_tien: amount,
-              });
-
-              try {
-                const response = await fetch("PHP/chitieu.php", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ danh_muc: category, so_tien: amount }),
-                });
-                const result = await response.json();
-
-                console.log("Kết quả từ API:", result);
-
-                if (result.success) {
-                  alert("Thêm khoản chi thành công!");
-                  fetchExpenses(); // Cập nhật danh sách chi tiêu
-                } else {
-                  alert(result.message || "Lỗi khi thêm khoản chi.");
-                }
-              } catch (error) {
-                console.error("Lỗi khi gọi API:", error);
-              }
-            });
-
-            // Gọi API khi tải trang
-            fetchExpenses();
+            fetchBalance();
+            fetchLimit();
           });
 
-          // Đặt giới hạn
+          // Đặt giới hạn qua API
           document
             .getElementById("limitForm")
-            .addEventListener("submit", (e) => {
+            .addEventListener("submit", async (e) => {
               e.preventDefault();
               const limit = parseInt(
                 document.getElementById("limitAmount").value
               );
-
-              if (isNaN(balance) || balance <= 0) {
-                alert("❌ Số dư hiện tại không hợp lệ. Vui lòng thử lại!");
+              if (limit <= 0 || limit > balance) {
+                alert("Giới hạn không hợp lệ!");
                 return;
               }
-
-              if (limit > balance) {
-                alert("❌ Số dư không đủ để đặt giới hạn này!");
-                return;
+              try {
+                const res = await fetch("PHP/gioihan.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ thang_nam: month, so_tien: limit }),
+                });
+                const data = await res.json();
+                // Đặt giới hạn
+                if (data.success) {
+                  monthlyLimit = limit;
+                  document.getElementById("monthlyLimit").textContent =
+                    monthlyLimit.toLocaleString() + " VNĐ";
+                  alert("Đặt giới hạn thành công!");
+                  location.reload(); // Thêm dòng này
+                } else {
+                  alert(data.message || "Lỗi đặt giới hạn!");
+                }
+              } catch (error) {
+                // alert("Lỗi khi gọi API!");
               }
-
-              balance -= limit;
-              monthlyLimit = limit;
-
-              saveData();
-              updateUI();
               e.target.reset();
             });
 
-          // Thêm khoản chi
-          document
-            .getElementById("expenseForm")
-            .addEventListener("submit", (e) => {
-              e.preventDefault();
-              const category = document.getElementById("category").value;
-              const amount = parseInt(document.getElementById("amount").value);
-
-              if (amount > monthlyLimit) {
-                alert("❌ Số tiền trong giới hạn không đủ!");
-                return;
+          // Bỏ giới hạn qua API
+          async function removeLimit() {
+            try {
+              const res = await fetch(`PHP/gioihan.php?thang_nam=${month}`, {
+                method: "DELETE",
+              });
+              const data = await res.json();
+              // Bỏ giới hạn
+              if (data.success) {
+                monthlyLimit = 0;
+                document.getElementById("monthlyLimit").textContent = "0 VNĐ";
+                alert("Đã bỏ giới hạn!");
+                location.reload(); // Thêm dòng này
+              } else {
+                alert(data.message || "Lỗi bỏ giới hạn!");
               }
-
-              const expense = {
-                id: Date.now(),
-                category,
-                amount,
-                date: new Date().toLocaleDateString("vi-VN"),
-              };
-
-              expenses.push(expense);
-              monthlyLimit -= amount;
-
-              saveData();
-              renderExpenses();
-              updateUI();
-              e.target.reset();
-            });
-
-          // Xoá khoản chi
-          function deleteExpense(id) {
-            id = Number(id);
-            const expense = expenses.find((e) => e.id === id);
-            if (!expense) return;
-
-            if (confirm("Bạn có chắc muốn xoá khoản chi này?")) {
-              monthlyLimit += expense.amount;
-              expenses = expenses.filter((e) => e.id !== id);
-
-              saveData();
-              renderExpenses();
-              updateUI();
+            } catch (error) {
+              // alert("Lỗi khi gọi API!");
             }
           }
 
-          // Bỏ giới hạn
-          function removeLimit() {
-            if (monthlyLimit > 0) {
-              balance += monthlyLimit;
-              monthlyLimit = 0;
-
-              saveData();
-              updateUI();
+          document.getElementById("expenseForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const category = document.getElementById("category").value;
+            const amount = parseInt(document.getElementById("amount").value);
+            if (!category || amount <= 0) {
+              alert("Vui lòng chọn danh mục và nhập số tiền hợp lệ!");
+              return;
             }
-          }
-
-          // Render bảng chi tiêu
-          function renderExpenses() {
-            const tbody = document.getElementById("expenseTableBody");
-            tbody.innerHTML = "";
-
-            expenses.forEach((ex) => {
-              const row = document.createElement("tr");
-              row.innerHTML = `
-            <td>${ex.id}</td>
-            <td>${ex.date}</td>
-            <td>${ex.category}</td>
-            <td>${ex.amount.toLocaleString()} VNĐ</td>
-            <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteExpense(${
-                ex.id
-              })">Xoá</button>
-            </td>
-          `;
-              tbody.appendChild(row);
+            try {
+              const res = await fetch("PHP/chitieu.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ danh_muc: category, so_tien: amount })
             });
+            const data = await res.json();
+            // Thêm khoản chi
+            if (data.success) {
+              alert("Thêm khoản chi thành công!");
+              location.reload(); // Thêm dòng này
+            } else {
+              alert(data.message || "Lỗi thêm khoản chi!");
+            }
+          } catch (error) {
+            // alert("Lỗi khi gọi API!");
           }
+          e.target.reset();
+        });
 
-          // Cập nhật số dư và giới hạn
-          function updateUI() {
-            document.getElementById("currentBalance").textContent =
-              balance.toLocaleString() + " VNĐ";
-            document.getElementById("monthlyLimit").textContent =
-              monthlyLimit.toLocaleString() + " VNĐ";
+        // Hàm lấy danh sách chi tiêu
+        async function fetchExpenses() {
+          try {
+            const res = await fetch("PHP/chitieu.php");
+            const data = await res.json();
+            if (data.success) {
+              expenses = data.expenses;
+              renderExpenses();
+            }
+          } catch (error) {
+            // Có thể log lỗi nếu cần
           }
+        }
 
-          // Lưu dữ liệu
-          function saveData() {
-            localStorage.setItem("balance", balance);
-            localStorage.setItem("monthlyLimit", monthlyLimit);
-            localStorage.setItem("expenses", JSON.stringify(expenses));
+        // Hàm render bảng chi tiêu
+        function renderExpenses() {
+          const tbody = document.getElementById("expenseTableBody");
+          tbody.innerHTML = "";
+          expenses.forEach(exp => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${exp.id}</td>
+              <td>${exp.ngay}</td>
+              <td>${exp.danh_muc}</td>
+              <td>${parseInt(exp.so_tien).toLocaleString()} VNĐ</td>
+              <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteExpense(${exp.id})">Xoá</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        async function deleteExpense(id) {
+          if (!confirm("Bạn có chắc muốn xoá khoản chi này?")) return;
+          try {
+            const res = await fetch("PHP/chitieu.php", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+            // Xoá khoản chi
+            if (data.success) {
+              alert("Đã xoá khoản chi!");
+              location.reload(); // Thêm dòng này
+            } else {
+              alert(data.message || "Lỗi xoá khoản chi!");
+            }
+          } catch (error) {
+            // Có thể log lỗi nếu cần
           }
+        }
+
+        // Gọi fetchExpenses khi load trang
+        document.addEventListener("DOMContentLoaded", () => {
+          fetchExpenses();
+        });
         </script>
 
         <script src="js/navbar.js"></script>
