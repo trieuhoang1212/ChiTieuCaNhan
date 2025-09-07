@@ -72,7 +72,7 @@ if ($method === 'POST') {
         exit();
     }
 
-    // Lấy giới hạn tháng hiện tại
+    // Lấy giới hạn tháng hiện tại (nếu có)
     $stmtLimit = $conn->prepare("SELECT id, so_tien FROM gioihan WHERE thang_nam=? ORDER BY id DESC LIMIT 1");
     $stmtLimit->bind_param("s", $month);
     $stmtLimit->execute();
@@ -80,19 +80,20 @@ if ($method === 'POST') {
     $rowLimit = $resLimit->fetch_assoc();
     $stmtLimit->close();
 
-    if (!$rowLimit || $rowLimit['so_tien'] < $so_tien) {
-        http_response_code(400);
-        echo json_encode(["success" => false, "message" => "Vượt quá giới hạn tháng!"]);
-        $conn->close();
-        exit();
+    if ($rowLimit) {
+        // Có thiết lập giới hạn: kiểm tra và trừ
+        if ($rowLimit['so_tien'] < $so_tien) {
+            http_response_code(400);
+            echo json_encode(["success" => false, "message" => "Vượt quá giới hạn tháng!"]);
+            $conn->close();
+            exit();
+        }
+        $newLimit = $rowLimit['so_tien'] - $so_tien;
+        $stmtUpdateLimit = $conn->prepare("UPDATE gioihan SET so_tien=? WHERE id=?");
+        $stmtUpdateLimit->bind_param("ii", $newLimit, $rowLimit['id']);
+        $stmtUpdateLimit->execute();
+        $stmtUpdateLimit->close();
     }
-
-    // Trừ giới hạn tháng
-    $newLimit = $rowLimit['so_tien'] - $so_tien;
-    $stmtUpdateLimit = $conn->prepare("UPDATE gioihan SET so_tien=? WHERE id=?");
-    $stmtUpdateLimit->bind_param("ii", $newLimit, $rowLimit['id']);
-    $stmtUpdateLimit->execute();
-    $stmtUpdateLimit->close();
 
     // Thêm khoản chi vào chitieu
     $stmt = $conn->prepare("INSERT INTO chitieu (ngay, danh_muc, so_tien) VALUES (?, ?, ?)");

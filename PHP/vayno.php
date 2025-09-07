@@ -8,7 +8,7 @@ header("Content-Type: application/json; charset=UTF-8");
 // Preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type");
+    header("Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization");
     http_response_code(200);
     exit();
 }
@@ -99,7 +99,7 @@ if ($method === 'GET') {
 
 if ($method === 'POST') {
     // Thêm khoản vay mới
-    $data = json_decode(file_get_contents("php://input"), true);
+    $data = function_exists('read_request_data') ? read_request_data() : json_decode(file_get_contents("php://input"), true);
     if (!is_array($data)) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Dữ liệu không hợp lệ."]);
@@ -126,15 +126,37 @@ if ($method === 'POST') {
     // Tính tiền trả mỗi tháng theo quy tắc đơn giản
     $monthlyPayment = (int)ceil($amount / max(1, $months));
 
-    // Thêm khoản vay vào bảng vayno (bao gồm cột NOT NULL tien_tra_moi_thang)
-    $stmt = $conn->prepare("INSERT INTO vayno (ten_khoan_vay, so_tien, so_thang, tien_tra_moi_thang, ngay_bat_dau) VALUES (?, ?, ?, ?, ?)");
-    if (!$stmt) {
-        http_response_code(500);
-        echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
-        $conn->close();
-        exit();
+    // Kiểm tra tồn tại cột 'tien_tra_moi_thang'
+    $hasMonthlyCol = false;
+    if ($result = $conn->query("SHOW COLUMNS FROM vayno LIKE 'tien_tra_moi_thang'")) {
+        $hasMonthlyCol = $result->num_rows > 0;
+        $result->close();
     }
-    $stmt->bind_param("siiis", $loanName, $amount, $months, $monthlyPayment, $startDate);
+
+    if ($hasMonthlyCol) {
+        $stmt = $conn->prepare("INSERT INTO vayno (ten_khoan_vay, so_tien, so_thang, tien_tra_moi_thang, ngay_bat_dau) VALUES (?, ?, ?, ?, ?)");
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
+            $conn->close();
+            exit();
+        }
+        $amountStr = (string)$amount;
+        $monthlyStr = (string)$monthlyPayment;
+        // so_tien & tien_tra_moi_thang là BIGINT -> bind dạng string để an toàn
+        $stmt->bind_param("ssiss", $loanName, $amountStr, $months, $monthlyStr, $startDate);
+    } else {
+        // Fallback khi cột không tồn tại    
+        $stmt = $conn->prepare("INSERT INTO vayno (ten_khoan_vay, so_tien, so_thang, ngay_bat_dau) VALUES (?, ?, ?, ?)");
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
+            $conn->close();
+            exit();
+        }
+        $amountStr = (string)$amount;
+        $stmt->bind_param("ssis", $loanName, $amountStr, $months, $startDate);
+    }
 
     if (!$stmt->execute()) {
         http_response_code(500);
@@ -169,7 +191,7 @@ if ($method === 'POST') {
 
 if ($method === 'DELETE') {
     // Xóa khoản vay
-    $data = json_decode(file_get_contents("php://input"), true);
+    $data = function_exists('read_request_data') ? read_request_data() : json_decode(file_get_contents("php://input"), true);
     if (!is_array($data) || !isset($data['id'])) {
         http_response_code(400);
         echo json_encode(["success" => false, "message" => "Dữ liệu không hợp lệ."]);
