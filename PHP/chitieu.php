@@ -1,28 +1,39 @@
 <?php
 // filepath: c:\xampp\htdocs\ChiTieuCaNhan\PHP\chitieu.php
+// Bootstrap API giống naprut.php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-
-// Preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
     http_response_code(200);
     exit();
 }
-
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "quanlychitieu";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);
-    exit();
+// Hàm đọc dữ liệu JSON hoặc form (an toàn nếu đã khai báo ở nơi khác)
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
 }
-$conn->set_charset("utf8mb4");
+// Bảo đảm có kết nối DB
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 

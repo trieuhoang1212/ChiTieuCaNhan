@@ -8,17 +8,37 @@
 
 declare(strict_types=1);
 
-header('Access-Control-Allow-Origin: *');
-// Broaden allowed headers for CORS & method override support
-header('Access-Control-Allow-Headers: Content-Type, X-Requested-With, X-HTTP-Method-Override');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	http_response_code(200);
-	exit;
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type");
+    http_response_code(200);
+    exit();
 }
-
-require_once __DIR__ . '/db.php';
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
+}
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    }
+}
 
 function map_row_to_client(array $r): array {
 	return [
@@ -76,7 +96,17 @@ try {
 		$daily = (int)ceil($target / $diffDays);
 
 		$sql = 'INSERT INTO tichluy (ten_muc_tieu, so_tien_muc_tieu, ngay_bat_dau, ngay_ket_thuc, so_ngay, so_tien_trung_binh_ngay, so_tien_da_tich_luy, trang_thai) VALUES (?,?,?,?,?,?,?,?)';
-		$pdo->prepare($sql)->execute([$goal, $target, $startDate, $endDate, $diffDays, $daily, 0, 'dang_tich_luy']);
+		try {
+			$pdo->prepare($sql)->execute([$goal, $target, $startDate, $endDate, $diffDays, $daily, 0, 'dang_tich_luy']);
+		} catch (Throwable $ex) {
+			// Fallback cho trường hợp cột id không có AUTO_INCREMENT và STRICT mode bật
+			// SQLSTATE[HY000]: General error: 1364 Field 'id' doesn't have a default value
+			if (strpos($ex->getMessage(), "Field 'id' doesn't have a default value") !== false || strpos($ex->getMessage(), '1364') !== false) {
+				$nextId = (int)($pdo->query('SELECT IFNULL(MAX(id), 0) + 1 FROM tichluy')->fetchColumn() ?: 1);
+				$sql2 = 'INSERT INTO tichluy (id, ten_muc_tieu, so_tien_muc_tieu, ngay_bat_dau, ngay_ket_thuc, so_ngay, so_tien_trung_binh_ngay, so_tien_da_tich_luy, trang_thai) VALUES (?,?,?,?,?,?,?,?,?)';
+				$pdo->prepare($sql2)->execute([$nextId, $goal, $target, $startDate, $endDate, $diffDays, $daily, 0, 'dang_tich_luy']);
+			} else { throw $ex; }
+		}
 
 		$id = (int)$pdo->lastInsertId();
 		// Some MariaDB setups can return 0 if table doesn't have AUTO_INCREMENT correctly set

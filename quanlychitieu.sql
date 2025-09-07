@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th8 29, 2025 lúc 01:10 PM
--- Phiên bản máy phục vụ: 10.4.32-MariaDB
--- Phiên bản PHP: 8.0.30
+-- Host: localhost
+-- Generation Time: Sep 06, 2025 at 11:23 PM
+-- Server version: 5.7.43-log
+-- PHP Version: 8.3.15
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,39 +18,62 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Cơ sở dữ liệu: `quanlychitieu`
+-- Database: `sql_nhom11_itimi`
 --
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chitieu`
+-- Table structure for table `admin`
+--
+
+CREATE TABLE `admin` (
+  `id` int(11) NOT NULL,
+  `ten_dang_nhap` varchar(50) NOT NULL,
+  `mat_khau` varchar(255) NOT NULL,
+  `ho_ten` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `quyen` enum('super_admin','admin') DEFAULT 'admin',
+  `ngay_tao` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `admin`
+--
+
+INSERT INTO `admin` (`id`, `ten_dang_nhap`, `mat_khau`, `ho_ten`, `email`, `quyen`, `ngay_tao`) VALUES
+(1, 'admin', 'e10adc3949ba59abbe56e057f20f883e', 'Quản trị viên', 'admin@quanlychitieu.com', 'super_admin', '2025-09-05 06:45:52');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chitieu`
 --
 
 CREATE TABLE `chitieu` (
   `id` int(11) NOT NULL,
-  `danh_muc` varchar(255) NOT NULL,
+  `danh_muc` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `so_tien` int(11) NOT NULL,
   `ngay` datetime NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `danhba`
+-- Table structure for table `danhba`
 --
 
 CREATE TABLE `danhba` (
   `id` int(11) NOT NULL,
-  `ho_ten` varchar(100) NOT NULL,
-  `so_tai_khoan` varchar(50) NOT NULL,
-  `ngan_hang` varchar(50) NOT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+  `ho_ten` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `so_tai_khoan` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ngan_hang` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ngay_tao` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `danhba`
+-- Dumping data for table `danhba`
 --
 
 INSERT INTO `danhba` (`id`, `ho_ten`, `so_tai_khoan`, `ngan_hang`, `ngay_tao`) VALUES
@@ -59,18 +82,18 @@ INSERT INTO `danhba` (`id`, `ho_ten`, `so_tai_khoan`, `ngan_hang`, `ngay_tao`) V
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `gioihan`
+-- Table structure for table `gioihan`
 --
 
 CREATE TABLE `gioihan` (
   `id` int(11) NOT NULL,
   `so_tien` int(11) NOT NULL,
-  `thang_nam` varchar(7) NOT NULL,
-  `ngay` datetime DEFAULT current_timestamp()
+  `thang_nam` varchar(7) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ngay` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `gioihan`
+-- Dumping data for table `gioihan`
 --
 
 INSERT INTO `gioihan` (`id`, `so_tien`, `thang_nam`, `ngay`) VALUES
@@ -79,7 +102,7 @@ INSERT INTO `gioihan` (`id`, `so_tien`, `thang_nam`, `ngay`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `lichtragop`
+-- Table structure for table `lichtragop`
 --
 
 CREATE TABLE `lichtragop` (
@@ -88,27 +111,27 @@ CREATE TABLE `lichtragop` (
   `ky_thu` int(11) NOT NULL,
   `ngay_den_han` date NOT NULL,
   `so_tien_tra` bigint(20) NOT NULL,
-  `da_tra` tinyint(1) DEFAULT 0,
+  `da_tra` tinyint(1) DEFAULT '0',
   `ngay_tra_thuc_te` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `naprut`
+-- Table structure for table `naprut`
 --
 
 CREATE TABLE `naprut` (
   `id` int(11) NOT NULL,
   `ngay` datetime NOT NULL,
-  `loai` enum('Nạp','Rút') NOT NULL,
-  `mo_ta` varchar(255) DEFAULT NULL,
+  `loai` enum('Nạp','Rút') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mo_ta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `so_tien` int(11) NOT NULL,
   `so_du_sau` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `naprut`
+-- Dumping data for table `naprut`
 --
 
 INSERT INTO `naprut` (`id`, `ngay`, `loai`, `mo_ta`, `so_tien`, `so_du_sau`) VALUES
@@ -183,36 +206,50 @@ INSERT INTO `naprut` (`id`, `ngay`, `loai`, `mo_ta`, `so_tien`, `so_du_sau`) VAL
 (72, '2025-08-29 12:55:10', 'Nạp', 'Cộng tiền vay', 100000, 10089000),
 (73, '2025-08-29 12:56:32', 'Nạp', 'Cộng tiền vay', 10000, 10099000),
 (74, '2025-08-29 13:00:34', 'Nạp', 'Cộng tiền vay', 10000, 10109000),
-(75, '2025-08-29 13:00:42', 'Nạp', 'Cộng tiền vay', 12121212, 22230212);
+(75, '2025-08-29 13:00:42', 'Nạp', 'Cộng tiền vay', 12121212, 22230212),
+(76, '2025-08-29 13:15:28', 'Rút', 'hello', 22230212, 0),
+(77, '2025-08-29 13:15:42', 'Nạp', 'hello', 2000000, 2000000),
+(78, '2025-08-29 13:15:50', 'Nạp', 'hello', 10000000, 12000000),
+(79, '2025-08-29 13:37:26', 'Rút', 'Gửi tiết kiệm: Mua Nhà', 10000000, 2000000),
+(80, '2025-08-29 13:45:17', 'Nạp', 'Tất toán sổ tiết kiệm: Mua Nhà', 10000000, 12000000),
+(81, '2025-08-29 13:45:26', 'Rút', 'Gửi tiết kiệm: để dành tiền mua nhà', 12000000, 0),
+(82, '2025-08-29 13:45:33', 'Nạp', 'Tất toán sổ tiết kiệm: để dành tiền mua nhà', 12000000, 12000000),
+(83, '2025-08-29 13:45:51', 'Rút', 'Gửi tiết kiệm: để dành tiền mua nhà', 12000000, 0),
+(84, '2025-08-29 13:51:31', 'Nạp', 'Tất toán sổ tiết kiệm: để dành tiền mua nhà', 12000000, 12000000),
+(85, '2025-08-29 13:57:49', 'Rút', 'Gửi tiết kiệm: Mua Nhà', 12000, 11988000),
+(86, '2025-08-29 13:57:54', 'Nạp', 'Tất toán sổ tiết kiệm: Mua Nhà', 12000, 12000000),
+(87, '2025-08-29 14:06:45', 'Rút', 'Gửi tiết kiệm: Mua Nhà', 12000000, 0),
+(88, '2025-09-06 23:03:36', 'Nạp', 'Tiền Lương tháng này', 1000, 1000),
+(89, '2025-09-06 23:20:54', 'Nạp', 'Tiền Lương tháng này', 10000000, 10001000);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `nguoi_dung`
+-- Table structure for table `nguoi_dung`
 --
 
 CREATE TABLE `nguoi_dung` (
   `id` int(11) NOT NULL,
-  `ten_dang_nhap` varchar(50) NOT NULL,
-  `mat_khau` varchar(255) NOT NULL,
-  `ho_ten` varchar(100) DEFAULT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+  `ten_dang_nhap` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mat_khau` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ho_ten` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ngay_tao` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `sodu`
+-- Table structure for table `sodu`
 --
 
 CREATE TABLE `sodu` (
   `id` int(11) NOT NULL,
   `so_tien` bigint(20) NOT NULL,
-  `ngay` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `ngay` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
--- Đang đổ dữ liệu cho bảng `sodu`
+-- Dumping data for table `sodu`
 --
 
 INSERT INTO `sodu` (`id`, `so_tien`, `ngay`) VALUES
@@ -229,38 +266,45 @@ INSERT INTO `sodu` (`id`, `so_tien`, `ngay`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `sotietkiem`
+-- Table structure for table `sotietkiem`
 --
 
 CREATE TABLE `sotietkiem` (
   `ma_so` int(11) NOT NULL,
-  `ten_so` varchar(100) NOT NULL,
-  `so_tien` bigint(20) NOT NULL CHECK (`so_tien` > 0),
-  `ky_han` int(11) NOT NULL DEFAULT 0,
+  `ten_so` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `so_tien` bigint(20) NOT NULL,
+  `ky_han` int(11) NOT NULL DEFAULT '0',
   `lai_suat` decimal(5,2) NOT NULL,
   `ngay_gui` date NOT NULL,
   `ngay_dao_han` date DEFAULT NULL,
-  `trang_thai` enum('dang_gui','tat_toan') DEFAULT 'dang_gui',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+  `trang_thai` enum('dang_gui','tat_toan') COLLATE utf8mb4_unicode_ci DEFAULT 'dang_gui',
+  `ngay_tao` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sotietkiem`
+--
+
+INSERT INTO `sotietkiem` (`ma_so`, `ten_so`, `so_tien`, `ky_han`, `lai_suat`, `ngay_gui`, `ngay_dao_han`, `trang_thai`, `ngay_tao`) VALUES
+(5, 'Mua Nhà', 12000000, 3, 4.00, '2025-08-29', '2025-11-29', 'dang_gui', '2025-08-29 12:06:45');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `thuchi`
+-- Table structure for table `thuchi`
 --
 
 CREATE TABLE `thuchi` (
   `id` int(11) NOT NULL,
-  `loai` enum('Thu','Chi') NOT NULL,
-  `so_tien` bigint(20) NOT NULL CHECK (`so_tien` > 0),
+  `loai` enum('Thu','Chi') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `so_tien` bigint(20) NOT NULL,
   `ngay` date NOT NULL,
-  `mo_ta` text DEFAULT NULL,
+  `mo_ta` text COLLATE utf8mb4_unicode_ci,
   `nguoi_giao_dich_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `thuchi`
+-- Dumping data for table `thuchi`
 --
 
 INSERT INTO `thuchi` (`id`, `loai`, `so_tien`, `ngay`, `mo_ta`, `nguoi_giao_dich_id`) VALUES
@@ -269,25 +313,25 @@ INSERT INTO `thuchi` (`id`, `loai`, `so_tien`, `ngay`, `mo_ta`, `nguoi_giao_dich
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tichluy`
+-- Table structure for table `tichluy`
 --
 
 CREATE TABLE `tichluy` (
   `id` int(11) NOT NULL,
-  `ten_muc_tieu` varchar(255) NOT NULL,
+  `ten_muc_tieu` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `so_tien_muc_tieu` bigint(20) NOT NULL,
   `ngay_bat_dau` date NOT NULL,
   `ngay_ket_thuc` date NOT NULL,
   `so_ngay` int(11) NOT NULL,
   `so_tien_trung_binh_ngay` bigint(20) NOT NULL,
-  `so_tien_da_tich_luy` bigint(20) NOT NULL DEFAULT 0,
-  `trang_thai` enum('dang_tich_luy','hoan_thanh','huy') NOT NULL DEFAULT 'dang_tich_luy',
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp(),
-  `ngay_cap_nhat` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `so_tien_da_tich_luy` bigint(20) NOT NULL DEFAULT '0',
+  `trang_thai` enum('dang_tich_luy','hoan_thanh','huy') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'dang_tich_luy',
+  `ngay_tao` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ngay_cap_nhat` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tichluy`
+-- Dumping data for table `tichluy`
 --
 
 INSERT INTO `tichluy` (`id`, `ten_muc_tieu`, `so_tien_muc_tieu`, `ngay_bat_dau`, `ngay_ket_thuc`, `so_ngay`, `so_tien_trung_binh_ngay`, `so_tien_da_tich_luy`, `trang_thai`, `ngay_tao`, `ngay_cap_nhat`) VALUES
@@ -296,162 +340,175 @@ INSERT INTO `tichluy` (`id`, `ten_muc_tieu`, `so_tien_muc_tieu`, `ngay_bat_dau`,
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `vayno`
+-- Table structure for table `vayno`
 --
 
 CREATE TABLE `vayno` (
   `id` int(11) NOT NULL,
-  `ten_khoan_vay` varchar(255) NOT NULL,
-  `so_tien` bigint(20) NOT NULL CHECK (`so_tien` > 0),
-  `so_thang` int(11) NOT NULL CHECK (`so_thang` > 0),
+  `ten_khoan_vay` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `so_tien` bigint(20) NOT NULL,
+  `so_thang` int(11) NOT NULL,
   `tien_tra_moi_thang` bigint(20) NOT NULL,
   `ngay_bat_dau` date NOT NULL,
-  `ngay_tao` timestamp NOT NULL DEFAULT current_timestamp()
+  `ngay_tao` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Chỉ mục cho các bảng đã đổ
+-- Indexes for dumped tables
 --
 
 --
--- Chỉ mục cho bảng `chitieu`
+-- Indexes for table `admin`
+--
+ALTER TABLE `admin`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ten_dang_nhap` (`ten_dang_nhap`);
+
+--
+-- Indexes for table `chitieu`
 --
 ALTER TABLE `chitieu`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `danhba`
+-- Indexes for table `danhba`
 --
 ALTER TABLE `danhba`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `gioihan`
+-- Indexes for table `gioihan`
 --
 ALTER TABLE `gioihan`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `lichtragop`
+-- Indexes for table `lichtragop`
 --
 ALTER TABLE `lichtragop`
   ADD PRIMARY KEY (`id`),
   ADD KEY `vayno_id` (`vayno_id`);
 
 --
--- Chỉ mục cho bảng `naprut`
+-- Indexes for table `naprut`
 --
 ALTER TABLE `naprut`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `nguoi_dung`
+-- Indexes for table `nguoi_dung`
 --
 ALTER TABLE `nguoi_dung`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `ten_dang_nhap` (`ten_dang_nhap`);
 
 --
--- Chỉ mục cho bảng `sodu`
+-- Indexes for table `sodu`
 --
 ALTER TABLE `sodu`
   ADD PRIMARY KEY (`id`);
 
 --
--- Chỉ mục cho bảng `sotietkiem`
+-- Indexes for table `sotietkiem`
 --
 ALTER TABLE `sotietkiem`
   ADD PRIMARY KEY (`ma_so`);
 
 --
--- Chỉ mục cho bảng `thuchi`
+-- Indexes for table `thuchi`
 --
 ALTER TABLE `thuchi`
   ADD PRIMARY KEY (`id`),
   ADD KEY `nguoi_giao_dich_id` (`nguoi_giao_dich_id`);
 
 --
--- Chỉ mục cho bảng `vayno`
+-- Indexes for table `vayno`
 --
 ALTER TABLE `vayno`
   ADD PRIMARY KEY (`id`);
 
 --
--- AUTO_INCREMENT cho các bảng đã đổ
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT cho bảng `chitieu`
+-- AUTO_INCREMENT for table `admin`
+--
+ALTER TABLE `admin`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `chitieu`
 --
 ALTER TABLE `chitieu`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- AUTO_INCREMENT cho bảng `danhba`
+-- AUTO_INCREMENT for table `danhba`
 --
 ALTER TABLE `danhba`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT cho bảng `gioihan`
+-- AUTO_INCREMENT for table `gioihan`
 --
 ALTER TABLE `gioihan`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT cho bảng `lichtragop`
+-- AUTO_INCREMENT for table `lichtragop`
 --
 ALTER TABLE `lichtragop`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT cho bảng `naprut`
+-- AUTO_INCREMENT for table `naprut`
 --
 ALTER TABLE `naprut`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
 
 --
--- AUTO_INCREMENT cho bảng `nguoi_dung`
+-- AUTO_INCREMENT for table `nguoi_dung`
 --
 ALTER TABLE `nguoi_dung`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT cho bảng `sodu`
+-- AUTO_INCREMENT for table `sodu`
 --
 ALTER TABLE `sodu`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT cho bảng `sotietkiem`
+-- AUTO_INCREMENT for table `sotietkiem`
 --
 ALTER TABLE `sotietkiem`
-  MODIFY `ma_so` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `ma_so` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT cho bảng `thuchi`
+-- AUTO_INCREMENT for table `thuchi`
 --
 ALTER TABLE `thuchi`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT cho bảng `vayno`
+-- AUTO_INCREMENT for table `vayno`
 --
 ALTER TABLE `vayno`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- Các ràng buộc cho các bảng đã đổ
+-- Constraints for dumped tables
 --
 
 --
--- Các ràng buộc cho bảng `lichtragop`
+-- Constraints for table `lichtragop`
 --
 ALTER TABLE `lichtragop`
   ADD CONSTRAINT `lichtragop_ibfk_1` FOREIGN KEY (`vayno_id`) REFERENCES `vayno` (`id`) ON DELETE CASCADE;
 
 --
--- Các ràng buộc cho bảng `thuchi`
+-- Constraints for table `thuchi`
 --
 ALTER TABLE `thuchi`
   ADD CONSTRAINT `thuchi_ibfk_1` FOREIGN KEY (`nguoi_giao_dich_id`) REFERENCES `danhba` (`id`) ON DELETE SET NULL;

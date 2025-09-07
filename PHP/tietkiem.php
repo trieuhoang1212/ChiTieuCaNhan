@@ -1,5 +1,7 @@
 <?php
 // tietkiem.php - API để quản lý sổ tiết kiệm
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -10,25 +12,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "quanlychitieu";
-
-// Kết nối DB
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);
-    exit();
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
 }
-$conn->set_charset("utf8");
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Helper: kiểm tra cột có tồn tại không để truy vấn linh hoạt
-function hasColumn($conn, $dbName, $table, $column) {
+// Helper: kiểm tra cột có tồn tại không để truy vấn linh hoạt (tự lấy tên DB hiện tại)
+function hasColumn($conn, $table, $column) {
+    $dbRes = $conn->query("SELECT DATABASE() AS db");
+    $dbRow = $dbRes ? $dbRes->fetch_assoc() : null;
+    $dbName = $dbRow ? $dbRow['db'] : '';
+    if ($dbName === '') return false;
     $sql = "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?";
     if (!$stmt = $conn->prepare($sql)) {
         return false;
@@ -46,10 +59,11 @@ function hasColumn($conn, $dbName, $table, $column) {
 
 if ($method === 'GET') {
     // Lấy danh sách sổ tiết kiệm
-    $hasPayout = hasColumn($conn, $dbname, 'SoTietKiem', 'phuong_thuc_lai');
+    // Lưu ý: tên bảng trên host là 'sotietkiem' (chữ thường) -> dùng đúng tên để tránh lỗi case-sensitive
+    $hasPayout = hasColumn($conn, 'sotietkiem', 'phuong_thuc_lai');
     $selectSql = $hasPayout
-        ? "SELECT ma_so, ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, trang_thai, phuong_thuc_lai FROM SoTietKiem ORDER BY ngay_gui DESC"
-        : "SELECT ma_so, ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, trang_thai FROM SoTietKiem ORDER BY ngay_gui DESC";
+        ? "SELECT ma_so, ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, trang_thai, phuong_thuc_lai FROM sotietkiem ORDER BY ngay_gui DESC"
+        : "SELECT ma_so, ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, trang_thai FROM sotietkiem ORDER BY ngay_gui DESC";
     $stmt = $conn->prepare($selectSql);
     if (!$stmt) {
         http_response_code(500);
@@ -128,7 +142,7 @@ if ($method === 'POST') {
         }
 
         // Lấy số tiền hiện tại
-        $stmt = $conn->prepare("SELECT so_tien, ten_so FROM SoTietKiem WHERE ma_so = ?");
+    $stmt = $conn->prepare("SELECT so_tien, ten_so FROM sotietkiem WHERE ma_so = ?");
         if (!$stmt) {
             http_response_code(500);
             echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
@@ -159,7 +173,7 @@ if ($method === 'POST') {
         $remaining = $currentAmount - $withdrawAmount;
         if ($remaining <= 0) {
             // Tất toán
-            $upd = $conn->prepare("UPDATE SoTietKiem SET so_tien = 0, trang_thai = 'tat_toan', ngay_dao_han = IF(ngay_dao_han IS NULL, CURDATE(), ngay_dao_han) WHERE ma_so = ?");
+            $upd = $conn->prepare("UPDATE sotietkiem SET so_tien = 0, trang_thai = 'tat_toan', ngay_dao_han = IF(ngay_dao_han IS NULL, CURDATE(), ngay_dao_han) WHERE ma_so = ?");
             if (!$upd) {
                 http_response_code(500);
                 echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
@@ -176,7 +190,7 @@ if ($method === 'POST') {
             }
             $upd->close();
         } else {
-            $upd = $conn->prepare("UPDATE SoTietKiem SET so_tien = ? WHERE ma_so = ?");
+            $upd = $conn->prepare("UPDATE sotietkiem SET so_tien = ? WHERE ma_so = ?");
             if (!$upd) {
                 http_response_code(500);
                 echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
@@ -219,10 +233,10 @@ if ($method === 'POST') {
         exit();
     }
 
-    $hasPayout = hasColumn($conn, $dbname, 'SoTietKiem', 'phuong_thuc_lai');
+    $hasPayout = hasColumn($conn, 'sotietkiem', 'phuong_thuc_lai');
     $sql = $hasPayout
-        ? "INSERT INTO SoTietKiem (ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, phuong_thuc_lai) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        : "INSERT INTO SoTietKiem (ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han) VALUES (?, ?, ?, ?, ?, ?)";
+        ? "INSERT INTO sotietkiem (ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han, phuong_thuc_lai) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        : "INSERT INTO sotietkiem (ten_so, so_tien, ky_han, lai_suat, ngay_gui, ngay_dao_han) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         http_response_code(500);
@@ -273,7 +287,7 @@ if ($method === 'DELETE') {
     }
 
     $id = (int)$data['id'];
-    $stmt = $conn->prepare("DELETE FROM SoTietKiem WHERE ma_so = ?");
+    $stmt = $conn->prepare("DELETE FROM sotietkiem WHERE ma_so = ?");
     if (!$stmt) {
         http_response_code(500);
         echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);

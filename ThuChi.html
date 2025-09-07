@@ -15,14 +15,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
-      rel="stylesheet" />
+      rel="stylesheet"
+    />
     <!-- Icon Font Stylesheet -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
-      rel="stylesheet" />
+      rel="stylesheet"
+    />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css"
-      rel="stylesheet" />
+      rel="stylesheet"
+    />
 
     <!-- Libraries Stylesheet -->
     <link href="lib/animate/animate.min.css" rel="stylesheet" />
@@ -40,11 +43,13 @@
       <!-- Spinner Start -->
       <div
         id="spinner"
-        class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center"
+      >
         <div
           class="spinner-border text-primary"
           style="width: 4rem; height: 4rem"
-          role="status">
+          role="status"
+        >
           <span class="sr-only">Loading...</span>
         </div>
       </div>
@@ -53,7 +58,8 @@
       <!-- Navbar & Hero Start -->
       <div class="container-xxl position-relative p-0">
         <nav
-          class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
+          class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0"
+        >
           <a href="index.html" class="navbar-brand p-0">
             <h1 class="m-0">MoneyCare</h1>
             <!-- <img src="img/logo.png" alt="Logo"> -->
@@ -62,7 +68,8 @@
             class="navbar-toggler"
             type="button"
             data-bs-toggle="collapse"
-            data-bs-target="#navbarCollapse">
+            data-bs-target="#navbarCollapse"
+          >
             <span class="fa fa-bars"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
@@ -80,7 +87,9 @@
                 >
                 <div class="dropdown-menu m-0">
                   <a href="TichLuy.html" class="dropdown-item">Tích Luỹ</a>
-                  <a href="ThuChi.html" class="dropdown-item active">Giao Dịch</a>
+                  <a href="ThuChi.html" class="dropdown-item active"
+                    >Giao Dịch</a
+                  >
                   <a href="VayNo.html" class="dropdown-item">Vay Nợ</a>
                   <a href="TietKiem.html" class="dropdown-item">Tiết Kiệm</a>
                 </div>
@@ -95,7 +104,8 @@
                 <ul
                   class="dropdown-menu dropdown-menu-end"
                   aria-labelledby="loginLink"
-                  id="userDropdown">
+                  id="userDropdown"
+                >
                   <li>
                     <a class="dropdown-item" href="ThongTin.html"
                       >👤 Thông tin</a
@@ -128,7 +138,8 @@
                 </li>
                 <li
                   class="breadcrumb-item text-white active"
-                  aria-current="page">
+                  aria-current="page"
+                >
                   Giao Dịch
                 </li>
               </ol>
@@ -163,7 +174,8 @@
                 class="form-control"
                 name="amount"
                 min="1000"
-                required />
+                required
+              />
             </div>
             <div class="col-md-3">
               <label class="form-label">Ngày</label>
@@ -192,7 +204,8 @@
                 type="text"
                 class="form-control"
                 name="fullname"
-                required />
+                required
+              />
             </div>
 
             <div class="col-md-4">
@@ -223,7 +236,8 @@
                   class="form-check-input"
                   type="checkbox"
                   name="saveContact"
-                  id="saveContact" />
+                  id="saveContact"
+                />
                 <label class="form-check-label" for="saveContact"
                   >Lưu vào danh bạ</label
                 >
@@ -280,19 +294,49 @@
           }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-          fetchCurrentBalance();
+        async function refreshTransactions() {
+          try {
+            const res = await fetch("PHP/thuchi.php");
+            const data = await res.json();
+            if (
+              data &&
+              data.success &&
+              data.data &&
+              Array.isArray(data.data.transactions)
+            ) {
+              transactions = data.data.transactions.map((t) => ({
+                id: t.id,
+                type: t.type, // 'income' | 'expense'
+                amount: t.amount,
+                date: t.date,
+                note: t.note || "",
+                // The API may not include contact details; keep optional
+                fullname: t.fullname || "",
+                account: t.account || "",
+                bank: t.bank || "",
+              }));
+              renderTransactions();
+              // Balance may be provided; but we separately refresh balance
+            } else {
+              // fallback: keep current list
+              console.warn(
+                "Không lấy được danh sách giao dịch từ server",
+                data
+              );
+            }
+          } catch (e) {
+            console.error("Lỗi tải giao dịch:", e);
+          }
+        }
 
-          // lấy giao dịch đã lưu
-          const saved = localStorage.getItem("transactions");
-          if (saved) transactions = JSON.parse(saved);
-
-          // lấy danh bạ
+        document.addEventListener("DOMContentLoaded", async () => {
+          // lấy danh bạ (vẫn dùng localStorage tạm thời)
           const savedContacts = localStorage.getItem("contacts");
           if (savedContacts) contacts = JSON.parse(savedContacts);
-
-          renderTransactions();
           renderContacts();
+
+          await fetchCurrentBalance();
+          await refreshTransactions();
         });
 
         // Render danh bạ vào dropdown + danh sách
@@ -346,76 +390,115 @@
           }
         }
 
-        // Thêm giao dịch
+        // Thêm giao dịch (gửi về API thuchi.php)
         document
           .getElementById("transactionForm")
           .addEventListener("submit", function (e) {
             e.preventDefault();
             const form = e.target;
-            const type = form.type.value;
-            const amount = parseInt(form.amount.value);
-            const date = form.date.value;
-            const note = form.note.value;
-            const fullname = form.fullname.value;
-            const account = form.account.value;
-            const bank = form.bank.value;
-            const saveContact = form.saveContact.checked;
+            const payload = {
+              type: form.type.value, // 'income' | 'expense'
+              amount: parseInt(form.amount.value) || 0,
+              date: form.date.value,
+              note: form.note.value,
+              fullname: form.fullname.value,
+              account: form.account.value,
+              bank: form.bank.value,
+              saveContact: form.saveContact.checked,
+            };
 
-            if (!amount || amount <= 0) {
+            if (!payload.amount || payload.amount <= 0) {
               alert("❌ Số tiền không hợp lệ!");
               return;
             }
-
-            if (type === "expense" && amount > balance) {
-              alert("❌ Số dư không đủ để chi!");
-              return;
+            if (payload.type === "expense" && payload.amount > balance) {
+              if (
+                !confirm(
+                  'Số dư hiện tại có thể không đồng bộ. Tiếp tục gửi giao dịch "Chi"?'
+                )
+              ) {
+                return;
+              }
             }
 
-            const transaction = {
-              id: Date.now(),
-              type,
-              amount,
-              date,
-              note,
-              fullname,
-              account,
-              bank,
-            };
-            transactions.push(transaction);
+            (async () => {
+              try {
+                const res = await fetch("PHP/thuchi.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                  // Cập nhật số dư nếu server trả
+                  if (typeof data.data?.currentBalance === "number") {
+                    balance = data.data.currentBalance;
+                    document.getElementById("currentBalance").textContent =
+                      balance.toLocaleString() + " VNĐ";
+                  } else {
+                    await fetchCurrentBalance();
+                  }
+                  await refreshTransactions();
 
-            // lưu danh bạ nếu tick chọn
-            if (saveContact) {
-              contacts.push({ fullname, account, bank });
-              localStorage.setItem("contacts", JSON.stringify(contacts));
-              renderContacts();
-            }
+                  // lưu danh bạ local để tiện chọn nhanh
+                  if (
+                    payload.saveContact &&
+                    payload.fullname &&
+                    payload.account &&
+                    payload.bank
+                  ) {
+                    contacts.push({
+                      fullname: payload.fullname,
+                      account: payload.account,
+                      bank: payload.bank,
+                    });
+                    localStorage.setItem("contacts", JSON.stringify(contacts));
+                    renderContacts();
+                  }
 
-            // cập nhật số dư chỉ khi loại giao dịch là "Chi"
-            if (type === "expense") {
-              balance -= amount;
-              localStorage.setItem("balance", balance);
-              document.getElementById("currentBalance").textContent =
-                balance.toLocaleString() + " VNĐ";
-            }
-
-            localStorage.setItem("transactions", JSON.stringify(transactions));
-
-            renderTransactions();
-            form.reset();
+                  form.reset();
+                } else {
+                  alert(data?.message || "Không thể thêm giao dịch");
+                }
+              } catch (err) {
+                console.error("Lỗi thêm giao dịch:", err);
+                alert("Không thể kết nối máy chủ");
+              }
+            })();
           });
 
-        // Xoá giao dịch
+        // Xoá giao dịch (qua API)
         function deleteTransaction(id) {
           const t = transactions.find((x) => x.id === id);
-          if (!t) return;
-
-          if (confirm("Bạn có chắc muốn xoá giao dịch này?")) {
-            // xoá giao dịch mà không thay đổi số dư
-            transactions = transactions.filter((x) => x.id !== id);
-            localStorage.setItem("transactions", JSON.stringify(transactions));
-
-            renderTransactions();
+          if (!t) {
+            alert("Không tìm thấy giao dịch");
+            return;
           }
+          if (!confirm("Bạn có chắc muốn xoá giao dịch này?")) return;
+
+          (async () => {
+            try {
+              // Dùng POST override để tránh vấn đề với DELETE
+              const res = await fetch(
+                `PHP/thuchi.php?action=deleteTransaction`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id }),
+                }
+              );
+              const data = await res.json();
+              if (data && data.success) {
+                await fetchCurrentBalance();
+                await refreshTransactions();
+              } else {
+                alert(data?.message || "Không thể xoá giao dịch");
+              }
+            } catch (err) {
+              console.error("Lỗi xoá giao dịch:", err);
+              alert("Không thể kết nối máy chủ");
+            }
+          })();
         }
 
         // Hiển thị danh sách giao dịch
@@ -443,17 +526,23 @@
           }</strong> - ${t.amount.toLocaleString()} VNĐ</p>
           <p><strong>Ngày:</strong> ${t.date}</p>
           <p><strong>Mô tả:</strong> ${t.note || "(không)"} </p>
-          <p><strong>Người giao dịch:</strong> ${t.fullname} - ${
-          t.account
-        } (${t.bank})</p>
-          <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${t.id})">🗑️ Xoá giao dịch</button>
+          ${
+            t.fullname || t.account || t.bank
+              ? `<p><strong>Người giao dịch:</strong> ${t.fullname || ""} - ${
+                  t.account || ""
+                } (${t.bank || ""})</p>`
+              : ""
+          }
+          <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${
+            t.id
+          })">🗑️ Xoá giao dịch</button>
         `;
 
               if (t.type === "income") {
                 cardContent += `
             <div class="text-center mt-3">
               <img src="img/qr.png" alt="QR Code" width="128" height="128" onclick="openModal(this.src)" style="cursor: pointer;" />
-              <small class="text-muted">Quét mã QR để nhận tiền</small>
+              <small class="text-muted">Quét mã QR để trả tiền</small>
             </div>
           `;
               }

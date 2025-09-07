@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // naprut.php - hỗ trợ GET + POST (JSON hoặc x-www-form-urlencoded)
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
@@ -11,13 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "quanlychitieu";
+// $servername = "103.139.203.43:887"; // <-- Có thể bị hosting chặn
+$servername = "localhost"; // <-- Thử dùng giá trị này hoặc giá trị do hosting cung cấp
+$username   = "sql_nhom11_itimi"; // <-- Kiểm tra lại username này trên hosting
+$password   = "32dc07642ece1"; // <-- Kiểm tra lại password này trên hosting
+$dbname     = "sql_nhom11_itimi"; // <-- Kiểm tra lại dbname này trên hosting
 
 // Kết nối DB
-$conn = new mysqli($servername, $username, $password, $dbname);
+// Tách riêng port để chắc chắn
+$conn = new mysqli($servername, $username, $password, $dbname); 
 if ($conn->connect_error) {
     http_response_code(500);
     echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);

@@ -1,5 +1,7 @@
 <?php
 // sodu.php - API quản lý số dư (GET list, POST thêm)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -10,20 +12,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
-
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "quanlychitieu";
-
-// Kết nối DB
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);
-    exit();
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
 }
-$conn->set_charset("utf8mb4");
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -128,41 +137,41 @@ $conn->close();
 exit();
 ?>
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     const currentBalanceElement = document.getElementById("currentBalance");
     const balanceHistoryElement = document.getElementById("balanceHistory");
 
     // Hàm lấy số dư từ API
     async function fetchBalance() {
-      try {
-        const response = await fetch("PHP/sodu.php");
-        const data = await response.json();
+        try {
+            const response = await fetch("PHP/sodu.php");
+            const data = await response.json();
 
-        if (data.success) {
-          // Hiển thị số dư hiện tại
-          currentBalanceElement.textContent = data.currentBalance.toLocaleString() + " VNĐ";
+            if (data.success) {
+                // Hiển thị số dư hiện tại
+                currentBalanceElement.textContent = data.currentBalance.toLocaleString() + " VNĐ";
 
-          // Hiển thị lịch sử số dư
-          balanceHistoryElement.innerHTML = "";
-          data.balances.forEach((balance) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
+                // Hiển thị lịch sử số dư
+                balanceHistoryElement.innerHTML = "";
+                data.balances.forEach((balance) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
               <td>${balance.id}</td>
               <td>${balance.so_tien.toLocaleString()} VNĐ</td>
               <td>${balance.ngay}</td>
             `;
-            balanceHistoryElement.appendChild(row);
-          });
-        } else {
-          alert("Không thể tải dữ liệu số dư.");
+                    balanceHistoryElement.appendChild(row);
+                });
+            } else {
+                alert("Không thể tải dữ liệu số dư.");
+            }
+        } catch (error) {
+            console.error("Lỗi khi gọi API:", error);
+            alert("Đã xảy ra lỗi khi tải số dư.");
         }
-      } catch (error) {
-        console.error("Lỗi khi gọi API:", error);
-        alert("Đã xảy ra lỗi khi tải số dư.");
-      }
     }
 
     // Gọi API khi tải trang
     fetchBalance();
-  });
+});
 </script>

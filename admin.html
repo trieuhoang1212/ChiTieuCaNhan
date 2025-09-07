@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoneyCare - Admin Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <!-- Custom CSS -->
+    <link href="css/admin.css" rel="stylesheet" />
+</head>
+<body>
+    <!-- Spinner Start -->
+    <div id="spinner" class="position-fixed w-100 vh-100 bg-white d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-money-bill-wave"></i> <span>MoneyCare</span></h3>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#dashboard" class="menu-link active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+            </a></li>
+            <li><a href="#users" class="menu-link" data-section="users">
+                <i class="fas fa-users"></i> <span>Quản lý người dùng</span>
+            </a></li>
+            <li><a href="#transactions" class="menu-link" data-section="transactions">
+                <i class="fas fa-exchange-alt"></i> <span>Giao dịch</span>
+            </a></li>
+            <li><a href="#income" class="menu-link" data-section="income">
+                <i class="fas fa-plus-circle"></i> <span>Thu nhập</span>
+            </a></li>
+            <li><a href="#expense" class="menu-link" data-section="expense">
+                <i class="fas fa-minus-circle"></i> <span>Chi tiêu</span>
+            </a></li>
+            <li><a href="#categories" class="menu-link" data-section="categories">
+                <i class="fas fa-tags"></i> <span>Danh mục</span>
+            </a></li>
+            <li><a href="#reports" class="menu-link" data-section="reports">
+                <i class="fas fa-chart-bar"></i> <span>Báo cáo</span>
+            </a></li>
+            <li><a href="#settings" class="menu-link" data-section="settings">
+                <i class="fas fa-cogs"></i> <span>Cài đặt</span>
+            </a></li>
+            <li><a href="#" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span>
+            </a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Top Header -->
+        <div class="top-header">
+            <div class="d-flex align-items-center">
+                <button class="toggle-btn" id="toggleSidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h4 class="mb-0 ms-3" id="pageTitle">Dashboard</h4>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i> Admin
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-edit"></i> Hồ sơ</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Cài đặt</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="content-section fade-in">
+                <div class="row">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card income">
+                            <div class="icon">
+                                <i class="fas fa-plus-circle"></i>
+                            </div>
+                            <h3 class="mb-1" id="totalIncome">0 VNĐ</h3>
+                            <p class="text-muted mb-0">Tổng thu nhập</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card expense">
+                            <div class="icon">
+                                <i class="fas fa-minus-circle"></i>
+                            </div>
+                            <h3 class="mb-1" id="totalExpense">0 VNĐ</h3>
+                            <p class="text-muted mb-0">Tổng chi tiêu</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card users">
+                            <div class="icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h3 class="mb-1" id="totalUsers">0</h3>
+                            <p class="text-muted mb-0">Người dùng</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stats-card transactions">
+                            <div class="icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <h3 class="mb-1" id="totalTransactions">0</h3>
+                            <p class="text-muted mb-0">Giao dịch</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <h5 class="mb-4">Biểu đồ thu chi theo tháng</h5>
+                            <canvas id="monthlyChart" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-container">
+                            <h5 class="mb-4">Phân bổ chi tiêu</h5>
+                            <canvas id="pieChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="data-table">
+                            <div class="table-header">
+                                <h5 class="mb-0">Giao dịch gần đây</h5>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="recentTransactionsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Người dùng</th>
+                                            <th>Loại</th>
+                                            <th>Số tiền</th>
+                                            <th>Mô tả</th>
+                                            <th>Ngày</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" class="content-section" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Quản lý người dùng</h4>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">
+                        <i class="fas fa-plus"></i> Thêm người dùng
+                    </button>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0">Danh sách người dùng</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Ảnh</th>
+                                    <th>Tên</th>
+                                    <th>Email</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Trạng thái</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Section -->
+            <div id="transactions-section" class="content-section" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Quản lý giao dịch</h4>
+                    <button class="btn btn-primary" onclick="showAddTransactionModal()">
+                        <i class="fas fa-plus"></i> Thêm giao dịch
+                    </button>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <select class="form-control" id="filterType">
+                            <option value="">Tất cả loại</option>
+                            <option value="income">Thu nhập</option>
+                            <option value="expense">Chi tiêu</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" id="filterDateFrom" placeholder="Từ ngày">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" id="filterDateTo" placeholder="Đến ngày">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-primary" onclick="filterTransactions()">
+                            <i class="fas fa-filter"></i> Lọc
+                        </button>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0">Danh sách giao dịch</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="transactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Người dùng</th>
+                                    <th>Loại</th>
+                                    <th>Danh mục</th>
+                                    <th>Số tiền</th>
+                                    <th>Mô tả</th>
+                                    <th>Ngày</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Income Section -->
+            <div id="income-section" class="content-section" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Quản lý thu nhập</h4>
+                    <button class="btn btn-primary" onclick="showAddIncomeModal()">
+                        <i class="fas fa-plus"></i> Thêm thu nhập
+                    </button>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0">Danh sách thu nhập</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="incomeTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Người dùng</th>
+                                    <th>Danh mục</th>
+                                    <th>Số tiền</th>
+                                    <th>Mô tả</th>
+                                    <th>Ngày</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Section -->
+            <div id="expense-section" class="content-section" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Quản lý chi tiêu</h4>
+                    <button class="btn btn-primary" onclick="showAddExpenseModal()">
+                        <i class="fas fa-plus"></i> Thêm chi tiêu
+                    </button>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0">Danh sách chi tiêu</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="expenseTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Người dùng</th>
+                                    <th>Danh mục</th>
+                                    <th>Số tiền</th>
+                                    <th>Mô tả</th>
+                                    <th>Ngày</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Section -->
+            <div id="categories-section" class="content-section" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Quản lý danh mục</h4>
+                    <button class="btn btn-primary" onclick="showAddCategoryModal()">
+                        <i class="fas fa-plus"></i> Thêm danh mục
+                    </button>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h5 class="mb-0">Danh sách danh mục</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="categoriesTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên danh mục</th>
+                                    <th>Loại</th>
+                                    <th>Màu sắc</th>
+                                    <th>Icon</th>
+                                    <th>Mô tả</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reports-section" class="content-section" style="display: none;">
+                <h4 class="mb-4">Báo cáo thống kê</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <select class="form-control" id="reportType">
+                            <option value="monthly">Báo cáo theo tháng</option>
+                            <option value="yearly">Báo cáo theo năm</option>
+                            <option value="category">Báo cáo theo danh mục</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="month" class="form-control" id="reportMonth">
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary" onclick="generateReport()">
+                            <i class="fas fa-chart-line"></i> Tạo báo cáo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-4">Biểu đồ thu nhập</h5>
+                            <canvas id="incomeChart" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h5 class="mb-4">Biểu đồ chi tiêu</h5>
+                            <canvas id="expenseChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings-section" class="content-section" style="display: none;">
+                <h4 class="mb-4">Cài đặt hệ thống</h4>
+                
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="stats-card">
+                            <h5 class="mb-3">Cài đặt chung</h5>
+                            <form id="settingsForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên ứng dụng</label>
+                                    <input type="text" class="form-control" value="MoneyCare">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email hỗ trợ</label>
+                                    <input type="email" class="form-control" value="support@moneycare.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Múi giờ</label>
+                                    <select class="form-control">
+                                        <option>Asia/Ho_Chi_Minh</option>
+                                        <option>Asia/Bangkok</option>
+                                        <option>Asia/Singapore</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Lưu cài đặt</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="stats-card">
+                            <h5 class="mb-3">Đổi mật khẩu</h5>
+                            <form id="changePasswordForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Mật khẩu hiện tại</label>
+                                    <input type="password" class="form-control">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mật khẩu mới</label>
+                                    <input type="password" class="form-control">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Xác nhận mật khẩu mới</label>
+                                    <input type="password" class="form-control">
+                                </div>
+                                <button type="submit" class="btn btn-warning">Đổi mật khẩu</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm người dùng mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Tên đầy đủ</label>
+                                    <input type="text" class="form-control" name="fullname" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Số điện thoại</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Mật khẩu</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ảnh đại diện</label>
+                            <input type="file" class="form-control" name="avatar" accept="image/*">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="addUser()">Thêm người dùng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div class="modal fade" id="addTransactionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm giao dịch mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTransactionForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Người dùng</label>
+                                    <select class="form-control" name="user_id" required>
+                                        <option value="">Chọn người dùng</option>
+                                        <!-- Options will be loaded dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Loại giao dịch</label>
+                                    <select class="form-control" name="type" required>
+                                        <option value="">Chọn loại</option>
+                                        <option value="income">Thu nhập</option>
+                                        <option value="expense">Chi tiêu</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Danh mục</label>
+                                    <select class="form-control" name="category_id" required>
+                                        <option value="">Chọn danh mục</option>
+                                        <!-- Options will be loaded dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Số tiền</label>
+                                    <input type="number" class="form-control" name="amount" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ngày giao dịch</label>
+                            <input type="date" class="form-control" name="transaction_date" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="addTransaction()">Thêm giao dịch</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thêm danh mục mới</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCategoryForm">
+                        <div class="mb-3">
+                            <label class="form-label">Tên danh mục</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Loại</label>
+                            <select class="form-control" name="type" required>
+                                <option value="">Chọn loại</option>
+                                <option value="income">Thu nhập</option>
+                                <option value="expense">Chi tiêu</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Màu sắc</label>
+                            <input type="color" class="form-control" name="color" value="#00B98E">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Icon</label>
+                            <select class="form-control" name="icon">
+                                <option value="fas fa-shopping-cart">Mua sắm</option>
+                                <option value="fas fa-utensils">Ăn uống</option>
+                                <option value="fas fa-car">Giao thông</option>
+                                <option value="fas fa-home">Nhà ở</option>
+                                <option value="fas fa-gamepad">Giải trí</option>
+                                <option value="fas fa-briefcase">Lương</option>
+                                <option value="fas fa-gift">Thưởng</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mô tả</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary" onclick="addCategory()">Thêm danh mục</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Global variables
+        let sidebar = document.getElementById('sidebar');
+        let mainContent = document.getElementById('mainContent');
+        let pageTitle = document.getElementById('pageTitle');
+
+        // Initialize the application
+        $(document).ready(function() {
+            // Hide spinner
+            setTimeout(() => {
+                $('#spinner').removeClass('show');
+            }, 1000);
+
+            // Initialize components
+            initializeSidebar();
+            initializeDataTables();
+            loadDashboardData();
+            initializeCharts();
+        });
+
+        // Sidebar functionality
+        function initializeSidebar() {
+            // Toggle sidebar
+            document.getElementById('toggleSidebar').addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+            });
+
+            // Menu links
+            document.querySelectorAll('.menu-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    document.querySelectorAll('.menu-link').forEach(l => l.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Get section name
+                    const section = this.getAttribute('data-section');
+                    
+                    // Show corresponding section
+                    showSection(section);
+                    
+                    // Update page title
+                    pageTitle.textContent = this.querySelector('span').textContent;
+                });
+            });
+        }
+
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                targetSection.classList.add('fade-in');
+            }
+            
+            // Load section specific data
+            switch(sectionName) {
+                case 'users':
+                    loadUsersData();
+                    break;
+                case 'transactions':
+                    loadTransactionsData();
+                    break;
+                case 'income':
+                    loadIncomeData();
+                    break;
+                case 'expense':
+                    loadExpenseData();
+                    break;
+                case 'categories':
+                    loadCategoriesData();
+                    break;
+                case 'reports':
+                    loadReportsData();
+                    break;
+            }
+        }
+
+        // Initialize DataTables
+        function initializeDataTables() {
+            // Users table
+            $('#usersTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+
+            // Transactions table
+            $('#transactionsTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+
+            // Income table
+            $('#incomeTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+
+            // Expense table
+            $('#expenseTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+
+            // Categories table
+            $('#categoriesTable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+
+            // Recent transactions table
+            $('#recentTransactionsTable').DataTable({
+                responsive: true,
+                pageLength: 5,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json'
+                }
+            });
+        }
+
+        // Load dashboard data
+        function loadDashboardData() {
+            // Simulate API calls
+            setTimeout(() => {
+                document.getElementById('totalIncome').textContent = '50,000,000 VNĐ';
+                document.getElementById('totalExpense').textContent = '30,000,000 VNĐ';
+                document.getElementById('totalUsers').textContent = '1,234';
+                document.getElementById('totalTransactions').textContent = '5,678';
+            }, 500);
+        }
+
+        // Initialize charts
+        function initializeCharts() {
+            // Monthly chart
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
+                    datasets: [{
+                        label: 'Thu nhập',
+                        data: [12, 19, 3, 5, 2, 3, 20, 30, 25, 15, 10, 8],
+                        borderColor: '#00B98E',
+                        backgroundColor: 'rgba(0, 185, 142, 0.1)',
+                        fill: true
+                    }, {
+                        label: 'Chi tiêu',
+                        data: [8, 15, 2, 4, 1, 2, 15, 25, 20, 12, 8, 6],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Pie chart
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ăn uống', 'Giao thông', 'Mua sắm', 'Giải trí', 'Khác'],
+                    datasets: [{
+                        data: [30, 20, 25, 15, 10],
+                        backgroundColor: [
+                            '#00B98E',
+                            '#ff6b6b',
+                            '#4ecdc4',
+                            '#667eea',
+                            '#ffc107'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load data functions
+        function loadUsersData() {
+            // Simulate loading users data
+            const usersTable = $('#usersTable').DataTable();
+            usersTable.clear();
+            
+            // Sample data
+            const users = [
+                {
+                    id: 1,
+                    avatar: 'https://via.placeholder.com/40',
+                    name: 'Nguyễn Văn A',
+                    email: 'nguyenvana@email.com',
+                    phone: '0123456789',
+                    created_at: '2023-01-15',
+                    status: 'active'
+                },
+                {
+                    id: 2,
+                    avatar: 'https://via.placeholder.com/40',
+                    name: 'Trần Thị B',
+                    email: 'tranthib@email.com',
+                    phone: '0987654321',
+                    created_at: '2023-02-20',
+                    status: 'active'
+                }
+            ];
+
+            users.forEach(user => {
+                usersTable.row.add([
+                    user.id,
+                    `<img src="${user.avatar}" alt="Avatar" class="rounded-circle" width="40" height="40">`,
+                    user.name,
+                    user.email,
+                    user.phone,
+                    user.created_at,
+                    `<span class="badge bg-success">${user.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</span>`,
+                    `
+                        <button class="btn btn-sm btn-warning" onclick="editUser(${user.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `
+                ]);
+            });
+
+            usersTable.draw();
+        }
+
+        function loadTransactionsData() {
+            // Simulate loading transactions data
+            const transactionsTable = $('#transactionsTable').DataTable();
+            transactionsTable.clear();
+            
+            // Sample data
+            const transactions = [
+                {
+                    id: 1,
+                    user: 'Nguyễn Văn A',
+                    type: 'income',
+                    category: 'Lương',
+                    amount: '15,000,000',
+                    description: 'Lương tháng 3',
+                    date: '2023-03-01'
+                },
+                {
+                    id: 2,
+                    user: 'Trần Thị B',
+                    type: 'expense',
+                    category: 'Ăn uống',
+                    amount: '500,000',
+                    description: 'Ăn trưa',
+                    date: '2023-03-02'
+                }
+            ];
+
+            transactions.forEach(transaction => {
+                transactionsTable.row.add([
+                    transaction.id,
+                    transaction.user,
+                    `<span class="badge bg-${transaction.type === 'income' ? 'success' : 'danger'}">${transaction.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}</span>`,
+                    transaction.category,
+                    `${transaction.amount} VNĐ`,
+                    transaction.description,
+                    transaction.date,
+                    `
+                        <button class="btn btn-sm btn-warning" onclick="editTransaction(${transaction.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${transaction.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `
+                ]);
+            });
+
+            transactionsTable.draw();
+        }
+
+        function loadIncomeData() {
+            // Similar to loadTransactionsData but filtered for income
+            console.log('Loading income data...');
+        }
+
+        function loadExpenseData() {
+            // Similar to loadTransactionsData but filtered for expense
+            console.log('Loading expense data...');
+        }
+
+        function loadCategoriesData() {
+            // Simulate loading categories data
+            const categoriesTable = $('#categoriesTable').DataTable();
+            categoriesTable.clear();
+            
+            // Sample data
+            const categories = [
+                {
+                    id: 1,
+                    name: 'Lương',
+                    type: 'income',
+                    color: '#00B98E',
+                    icon: 'fas fa-briefcase',
+                    description: 'Thu nhập từ lương'
+                },
+                {
+                    id: 2,
+                    name: 'Ăn uống',
+                    type: 'expense',
+                    color: '#ff6b6b',
+                    icon: 'fas fa-utensils',
+                    description: 'Chi phí ăn uống'
+                }
+            ];
+
+            categories.forEach(category => {
+                categoriesTable.row.add([
+                    category.id,
+                    category.name,
+                    `<span class="badge bg-${category.type === 'income' ? 'success' : 'danger'}">${category.type === 'income' ? 'Thu nhập' : 'Chi tiêu'}</span>`,
+                    `<span class="badge" style="background-color: ${category.color};">${category.color}</span>`,
+                    `<i class="${category.icon}"></i>`,
+                    category.description,
+                    `
+                        <button class="btn btn-sm btn-warning" onclick="editCategory(${category.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${category.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `
+                ]);
+            });
+
+            categoriesTable.draw();
+        }
+
+        function loadReportsData() {
+            console.log('Loading reports data...');
+        }
+
+        // Modal functions
+        function showAddUserModal() {
+            $('#addUserModal').modal('show');
+        }
+
+        function showAddTransactionModal() {
+            $('#addTransactionModal').modal('show');
+        }
+
+        function showAddIncomeModal() {
+            $('#addTransactionModal').modal('show');
+            // Pre-select income type
+            $('#addTransactionModal select[name="type"]').val('income');
+        }
+
+        function showAddExpenseModal() {
+            $('#addTransactionModal').modal('show');
+            // Pre-select expense type
+            $('#addTransactionModal select[name="type"]').val('expense');
+        }
+
+        function showAddCategoryModal() {
+            $('#addCategoryModal').modal('show');
+        }
+
+        // CRUD functions
+        function addUser() {
+            const formData = new FormData(document.getElementById('addUserForm'));
+            
+            // Show loading
+            showNotification('Đang thêm người dùng...', 'warning');
+            
+            // Simulate API call
+            setTimeout(() => {
+                showNotification('Thêm người dùng thành công!', 'success');
+                $('#addUserModal').modal('hide');
+                loadUsersData();
+            }, 1000);
+        }
+
+        function addTransaction() {
+            const formData = new FormData(document.getElementById('addTransactionForm'));
+            
+            // Show loading
+            showNotification('Đang thêm giao dịch...', 'warning');
+            
+            // Simulate API call
+            setTimeout(() => {
+                showNotification('Thêm giao dịch thành công!', 'success');
+                $('#addTransactionModal').modal('hide');
+                loadTransactionsData();
+                loadDashboardData();
+            }, 1000);
+        }
+
+        function addCategory() {
+            const formData = new FormData(document.getElementById('addCategoryForm'));
+            
+            // Show loading
+            showNotification('Đang thêm danh mục...', 'warning');
+            
+            // Simulate API call
+            setTimeout(() => {
+                showNotification('Thêm danh mục thành công!', 'success');
+                $('#addCategoryModal').modal('hide');
+                loadCategoriesData();
+            }, 1000);
+        }
+
+        function editUser(id) {
+            showNotification('Chức năng đang phát triển...', 'warning');
+        }
+
+        function deleteUser(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+                showNotification('Xóa người dùng thành công!', 'success');
+                loadUsersData();
+            }
+        }
+
+        function editTransaction(id) {
+            showNotification('Chức năng đang phát triển...', 'warning');
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
+                showNotification('Xóa giao dịch thành công!', 'success');
+                loadTransactionsData();
+            }
+        }
+
+        function editCategory(id) {
+            showNotification('Chức năng đang phát triển...', 'warning');
+        }
+
+        function deleteCategory(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa danh mục này?')) {
+                showNotification('Xóa danh mục thành công!', 'success');
+                loadCategoriesData();
+            }
+        }
+
+        // Utility functions
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'exclamation-circle'}"></i>
+                ${message}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        function filterTransactions() {
+            showNotification('Đang lọc dữ liệu...', 'warning');
+            setTimeout(() => {
+                loadTransactionsData();
+                showNotification('Lọc dữ liệu thành công!', 'success');
+            }, 1000);
+        }
+
+        function generateReport() {
+            showNotification('Đang tạo báo cáo...', 'warning');
+            setTimeout(() => {
+                showNotification('Tạo báo cáo thành công!', 'success');
+            }, 2000);
+        }
+
+        function logout() {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+                showNotification('Đang đăng xuất...', 'warning');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1000);
+            }
+        }
+
+        // Form submissions
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            showNotification('Lưu cài đặt thành công!', 'success');
+        });
+
+        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            showNotification('Đổi mật khẩu thành công!', 'success');
+        });
+    </script>
+</body>
+</html>

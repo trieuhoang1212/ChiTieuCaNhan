@@ -1,5 +1,7 @@
 <?php
 // vayno.php - hỗ trợ GET, POST, DELETE
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -11,19 +13,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "quanlychitieu";
-
-// Kết nối DB
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Kết nối DB thất bại: " . $conn->connect_error]);
-    exit();
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
 }
-$conn->set_charset("utf8");
+
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    } else {
+        http_response_code(500);
+        echo json_encode(["success" => false, "message" => "Thiếu hàm kết nối DB."]);
+        exit();
+    }
+}
 
 // Hàm lấy số dư hiện tại (từ giao dịch mới nhất trong bảng naprut)
 function getCurrentBalance($conn) {
@@ -108,9 +123,18 @@ if ($method === 'POST') {
     $currentBalance = getCurrentBalance($conn);
     $newBalance = $currentBalance + $amount; // Cộng số tiền vay vào số dư
 
-    // Thêm khoản vay vào bảng vayno
-    $stmt = $conn->prepare("INSERT INTO vayno (ten_khoan_vay, so_tien, so_thang, ngay_bat_dau) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("siis", $loanName, $amount, $months, $startDate);
+    // Tính tiền trả mỗi tháng theo quy tắc đơn giản
+    $monthlyPayment = (int)ceil($amount / max(1, $months));
+
+    // Thêm khoản vay vào bảng vayno (bao gồm cột NOT NULL tien_tra_moi_thang)
+    $stmt = $conn->prepare("INSERT INTO vayno (ten_khoan_vay, so_tien, so_thang, tien_tra_moi_thang, ngay_bat_dau) VALUES (?, ?, ?, ?, ?)");
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(["success" => false, "message" => "Lỗi chuẩn bị truy vấn: " . $conn->error]);
+        $conn->close();
+        exit();
+    }
+    $stmt->bind_param("siiis", $loanName, $amount, $months, $monthlyPayment, $startDate);
 
     if (!$stmt->execute()) {
         http_response_code(500);

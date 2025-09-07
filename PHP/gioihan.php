@@ -1,43 +1,63 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type");
     http_response_code(200);
     exit();
 }
-
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "quanlychitieu";
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "message" => "Kết nối DB thất bại"]);
-    exit();
+if (!function_exists('read_request_data')) {
+    function read_request_data(): array {
+        $raw = file_get_contents("php://input");
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        $data = null;
+        if (stripos($contentType, 'application/json') !== false || (strlen(trim($raw)) > 0 && in_array(trim($raw)[0], ['{','[']))) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $data = $decoded;
+        }
+        if (!is_array($data) || empty($data)) {
+            if (!empty($_POST)) $data = $_POST;
+        }
+        return is_array($data) ? $data : [];
+    }
 }
-$conn->set_charset("utf8mb4");
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    require_once __DIR__ . '/db.php';
+    if (function_exists('get_db_connection')) {
+        $conn = get_db_connection();
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
-$data = json_decode(file_get_contents("php://input"), true);
+$data = read_request_data();
 $month = $_GET['thang_nam'] ?? $data['thang_nam'] ?? date('Y-m');
 
 // Hàm cập nhật số dư (ghi vào naprut)
 function updateBalance($conn, $amount, $action = 'subtract') {
+    // Lấy số dư hiện tại
     $res = $conn->query("SELECT so_du_sau FROM naprut ORDER BY id DESC LIMIT 1");
     $row = $res ? $res->fetch_assoc() : null;
     $current = $row ? (int)$row['so_du_sau'] : 0;
+
+    // Nếu trừ mà không đủ số dư thì không thực hiện
+    if ($action === 'subtract' && $amount > $current) {
+        return false;
+    }
+
     $new = ($action === 'subtract') ? $current - $amount : $current + $amount;
     $ngay = date('Y-m-d H:i:s');
-    $loai = ($action === 'subtract') ? 'Giới hạn' : 'Hoàn giới hạn';
+    // Sử dụng enum hợp lệ của bảng `naprut`: 'Nạp' hoặc 'Rút'
+    $loai = ($action === 'subtract') ? 'Rút' : 'Nạp';
     $mo_ta = ($action === 'subtract') ? 'Đặt giới hạn tháng' : 'Bỏ giới hạn tháng';
+
     $stmt = $conn->prepare("INSERT INTO naprut (ngay, loai, mo_ta, so_tien, so_du_sau) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssii", $ngay, $loai, $mo_ta, $amount, $new);
-    $stmt->execute();
+    $ok = $stmt->execute();
     $stmt->close();
+    return $ok;
 }
 
 if ($method === 'GET') {
@@ -64,7 +84,13 @@ if ($method === 'POST') {
         exit();
     }
     // Trừ số dư (ghi vào naprut)
-    updateBalance($conn, $so_tien, 'subtract');
+    $ok = updateBalance($conn, $so_tien, 'subtract');
+    if ($ok === false) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "message" => "Số dư không đủ để đặt giới hạn"]);
+        $conn->close();
+        exit();
+    }
     // Lưu giới hạn
     $stmt = $conn->prepare("SELECT id FROM gioihan WHERE thang_nam=?");
     $stmt->bind_param("s", $month);

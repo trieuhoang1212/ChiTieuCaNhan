@@ -10,10 +10,11 @@ function db(): PDO {
         return $pdo;
     }
 
-    $host = '127.0.0.1';
-    $dbname = 'quanlychitieu'; // Change if your database name is different
-    $user = 'root';            // Default XAMPP user
-    $pass = '';                // Default XAMPP has empty password
+    // Production credentials (match mysqli helper below)
+    $host = 'localhost';
+    $dbname = 'sql_nhom11_itimi';
+    $user = 'sql_nhom11_itimi';
+    $pass = '32dc07642ece1';
     $charset = 'utf8mb4';
 
     $dsn = "mysql:host={$host};dbname={$dbname};charset={$charset}";
@@ -56,3 +57,31 @@ function body_json(): array {
 }
 
 ?>
+<?php
+// Compatibility helper for scripts using mysqli-based connection (e.g., chitieu.php)
+if (!function_exists('get_db_connection')) {
+    function get_db_connection(): mysqli {
+        $servername = 'localhost';
+        $username   = 'sql_nhom11_itimi';
+        $password   = '32dc07642ece1';
+        $dbname     = 'sql_nhom11_itimi';
+
+        $conn = @new mysqli($servername, $username, $password, $dbname);
+        if ($conn->connect_error) {
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=UTF-8');
+            }
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Kết nối DB thất bại: ' . $conn->connect_error
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        // Use utf8mb4 for full Unicode support
+        if (method_exists($conn, 'set_charset')) {
+            $conn->set_charset('utf8mb4');
+        }
+        return $conn;
+    }
+}
